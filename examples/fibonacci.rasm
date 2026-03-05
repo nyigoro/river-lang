@@ -1,0 +1,9 @@
+; canonical phase-1 sample
+.epoch fib_epoch
+.sector compute
+.node fib_seed
+@reservoir input
+
+fib_seed <~ input
+fib_seed ~> fib_step /? safe
+#constraint nonnegative

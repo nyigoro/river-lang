@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "crates/geologist-backend",
+  "crates/river-sim"
+]
+resolver = "2"

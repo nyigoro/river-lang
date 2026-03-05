@@ -1,0 +1,43 @@
+# Node / TypeScript
+node_modules/
+compiler/ts-frontend/dist/
+
+# Rust
+**/target/
+
+# C / C++ builds
+build/
+cmake-build-*/
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Generated artifacts
+*.rvr
+
+# Master Specification - Core IP
+RIVER-LANG_v1.1_MASTER_SPEC.md
+docs/SPEC.md
+
+# Silicon implementation - private until formal disclosure
+hdl/cpp/src/
+hdl/cpp/include/hdl_codegen.hpp
+backend/rust/crates/geologist-backend/src/spatial_mapper.rs
+backend/rust/crates/geologist-backend/src/path_auditor.rs
+backend/rust/crates/geologist-backend/src/emitter.rs
+runtime/c/src/river_enclave_wipe.c
+runtime/c/src/river_spawn.c
+
+# Local secrets
+.env
+*.salt
+*.session

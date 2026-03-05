@@ -1,0 +1,8 @@
+[package]
+name = "river-sim"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+geologist-backend = { path = "../geologist-backend" }

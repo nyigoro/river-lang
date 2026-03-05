@@ -1,0 +1,102 @@
+name: CAA Enforcement
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  enforce-caa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify CAA attestation and signer registry
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          author = (os.getenv("PR_AUTHOR") or "").strip().lower().lstrip("@")
+          body = os.getenv("PR_BODY") or ""
+
+          if not author:
+              print("Missing PR author from event payload.")
+              sys.exit(1)
+
+          if author.endswith("[bot]"):
+              print(f"Skipping CAA check for bot account: {author}")
+              sys.exit(0)
+
+          attestation_pattern = re.compile(
+              r"- \[[xX]\] I have read and agree to the Contributor Assignment Agreement in docs/CAA\.md\."
+          )
+          if not attestation_pattern.search(body):
+              print("Missing required checked CAA attestation in PR body.")
+              print("Required line:")
+              print("- [x] I have read and agree to the Contributor Assignment Agreement in docs/CAA.md.")
+              sys.exit(1)
+
+          registry_path = Path("docs/CAA_SIGNERS.md")
+          if not registry_path.exists():
+              print("Missing docs/CAA_SIGNERS.md.")
+              sys.exit(1)
+
+          found = False
+          parse_error = None
+          for raw in registry_path.read_text(encoding="utf-8").splitlines():
+              line = raw.strip()
+              if not line.startswith("|"):
+                  continue
+
+              cells = [cell.strip() for cell in line.strip("|").split("|")]
+              if len(cells) < 5:
+                  continue
+
+              gh_user = cells[0].lower().lstrip("@")
+              if gh_user in {"github username", "---", ""}:
+                  continue
+
+              if gh_user != author:
+                  continue
+
+              found = True
+
+              legal_name = cells[1]
+              version = cells[2]
+              date_utc = cells[3]
+              evidence = cells[4]
+
+              if legal_name.lower() in {"", "your legal name"}:
+                  parse_error = "Signer row has empty or placeholder legal name."
+                  break
+              if version != "v1.0":
+                  parse_error = "Signer row must use CAA version v1.0."
+                  break
+              if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_utc):
+                  parse_error = "Signer row must use date format YYYY-MM-DD."
+                  break
+              if evidence == "":
+                  parse_error = "Signer row must include evidence link (PR or issue)."
+                  break
+
+              break
+
+          if not found:
+              print(f"CAA signer row not found for @{author} in docs/CAA_SIGNERS.md.")
+              sys.exit(1)
+
+          if parse_error:
+              print(parse_error)
+              sys.exit(1)
+
+          print(f"CAA enforcement passed for @{author}.")
+          PY

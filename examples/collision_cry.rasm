@@ -1,0 +1,10 @@
+; simulator phase test placeholder
+.epoch collision_test
+.sector verify
+.node stream_a
+.node stream_b
+.node merge_1
+
+stream_a ~> merge_1
+stream_b ~> merge_1
+#constraint expect_cry_on_conflict
