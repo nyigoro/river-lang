@@ -24,20 +24,41 @@ Thumbs.db
 # Generated artifacts
 *.rvr
 
-# Master Specification - Core IP
+# Core IP - Geologist Backend
+# These files contain the spatial mapping algorithm, path audit logic,
+# and binary emitter implementation. Do not publish until patent filed.
+# The scaffold stubs (empty function signatures) ARE committed.
+# Only the real implementations are excluded.
+backend/rust/crates/geologist-backend/src/spatial_mapper_impl.rs
+backend/rust/crates/geologist-backend/src/path_auditor_impl.rs
+backend/rust/crates/geologist-backend/src/emitter_impl.rs
+
+# Full compiled geologist binary
+backend/rust/target/
+
+# Core IP - C Runtime Internals
+# The header (river_hw.h) is public. The implementations below are private
+# until the silicon architecture is filed.
+runtime/c/src/river_spawn_impl.c
+runtime/c/src/river_enclave_wipe_impl.c
+
+# Master Spec
 RIVER-LANG_v1.1_MASTER_SPEC.md
 docs/SPEC.md
 
-# Silicon implementation - private until formal disclosure
-hdl/cpp/src/
-hdl/cpp/include/hdl_codegen.hpp
-backend/rust/crates/geologist-backend/src/spatial_mapper.rs
-backend/rust/crates/geologist-backend/src/path_auditor.rs
-backend/rust/crates/geologist-backend/src/emitter.rs
-runtime/c/src/river_enclave_wipe.c
-runtime/c/src/river_spawn.c
+# HDL Silicon Layer
+hdl/cpp/src/drc_engine.cpp
+hdl/cpp/src/hdl_codegen.cpp
 
 # Local secrets
 .env
 *.salt
 *.session
+*.rvr.key
+
+# Compiled binaries
+runtime/c/build/
+runtime/c/build-*/
+
+# LSP build output
+tooling/lsp/dist/

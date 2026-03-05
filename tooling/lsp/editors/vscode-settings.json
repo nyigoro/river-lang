@@ -1,0 +1,27 @@
+{
+  "_comment": "RIVER-LANG LSP — VSCode settings.json snippet",
+  "_instructions": [
+    "Add the 'files.associations' and 'lsp-client' sections to your .vscode/settings.json",
+    "Install the 'LSP Client' extension by Automox or 'Generic LSP Client' to use this."
+  ],
+
+  "files.associations": {
+    "*.rasm": "rasm"
+  },
+
+  "[rasm]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": false
+  },
+
+  "lsp-client.configs": [
+    {
+      "id": "river-lang",
+      "name": "RIVER-LANG",
+      "command": "river-lang-lsp",
+      "args": ["--stdio"],
+      "documentSelector": [{ "scheme": "file", "language": "rasm" }]
+    }
+  ]
+}

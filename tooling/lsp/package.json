@@ -1,0 +1,24 @@
+{
+  "name": "river-lang-lsp",
+  "version": "0.1.0",
+  "description": "RIVER-LANG Language Server Protocol implementation",
+  "license": "Apache-2.0",
+  "main": "dist/server.js",
+  "bin": {
+    "river-lang-lsp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "watch": "tsc --project tsconfig.json --watch",
+    "test": "node --test dist/server.test.js",
+    "start": "node dist/server.js --stdio"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}

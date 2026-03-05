@@ -1,0 +1,27 @@
+# RIVER-LANG LSP — Helix editor configuration
+# Place in: ~/.config/helix/languages.toml
+#
+# Prerequisites:
+#   npm install -g river-lang-lsp
+#   OR set the command to the full path below.
+
+[[language]]
+name = "rasm"
+scope = "source.rasm"
+injection-regex = "rasm"
+file-types = ["rasm"]
+comment-token = "//"
+indent = { tab-width = 2, unit = "  " }
+
+[language.language-server.river-lang-lsp]
+command = "river-lang-lsp"
+args    = ["--stdio"]
+# If not globally installed:
+# command = "node"
+# args    = ["/path/to/river-lang/tooling/lsp/dist/server.js", "--stdio"]
+
+# Auto-pairs for RIVER-LANG
+[language.auto-pairs]
+'(' = ')'
+'{' = '}'
+'[' = ']'
