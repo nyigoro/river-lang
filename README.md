@@ -44,5 +44,12 @@ Contributors must complete the one-time CAA flow described in that guide.
 ## Security and Disclosure
 If you discover a security-sensitive issue, open a private security report with maintainers instead of posting exploit details publicly.
 
+## IP / Privacy Notes
+The repository contains explicit IP protection rules in `.gitignore` under:
+- "Core IP – Geologist Backend"
+- "Core IP – C Runtime Internals"
+
+Those entries mark private implementation files that must not be committed.
+
 ## License
 Apache License 2.0. See [LICENSE](LICENSE).
