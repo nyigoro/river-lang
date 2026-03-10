@@ -124,7 +124,13 @@ static size_t build_minimal_rvr(uint8_t *buf, size_t cap,
 static const char *write_temp_rvr(const uint8_t *buf, size_t len) {
     static char path[256];
 #ifdef _WIN32
-    snprintf(path, sizeof(path), "%s\\river_test_XXXXXX.rvr", getenv("TEMP") ? getenv("TEMP") : ".");
+    char temp_dir[128];
+    size_t needed = 0;
+    const char *base = ".";
+    if (getenv_s(&needed, temp_dir, sizeof(temp_dir), "TEMP") == 0 && needed > 0) {
+        base = temp_dir;
+    }
+    snprintf(path, sizeof(path), "%s\\river_test_XXXXXX.rvr", base);
 #else
     snprintf(path, sizeof(path), "/tmp/river_test_%d.rvr", (int)getpid());
 #endif
