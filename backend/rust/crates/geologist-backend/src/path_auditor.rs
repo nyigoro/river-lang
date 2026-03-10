@@ -209,9 +209,6 @@ pub fn audit(instructions: &[Instruction], sectors: &[SectorRange]) -> AuditResu
     AuditResult::from_violations(violations)
 }
 
-pub fn audit_dir_bit_segregation(_paths: &[String]) -> AuditResult {
-    AuditResult::from_violations(Vec::new())
-}
 
 #[cfg(test)]
 mod tests {

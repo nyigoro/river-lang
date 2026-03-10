@@ -2,29 +2,185 @@ name: CI
 
 on:
   push:
+    branches: ["main", "dev"]
   pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  scaffold-check:
+  ts-check:
+    name: "TS · typecheck"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: compiler/ts-frontend
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: compiler/ts-frontend/package-lock.json
 
-      - name: Setup Rust
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+  rust-test:
+    name: "Rust · cargo test"
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: TS frontend type check
-        run: |
-          cd compiler/ts-frontend
-          npm install
-          npm run check
+      - name: Cache cargo registry + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            backend/rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('backend/rust/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
 
-      - name: Rust workspace check
+      - name: cargo check (fast pre-flight)
+        working-directory: backend/rust
+        run: cargo check --workspace
+
+      - name: cargo test (geologist-backend + river-sim)
+        working-directory: backend/rust
+        run: cargo test --workspace
+        env:
+          RUST_BACKTRACE: 1
+
+  c-runtime:
+    name: "C · runtime CTest"
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (cmake)
+        working-directory: runtime/c
+        shell: cmd
         run: |
-          cd backend/rust
-          cargo check --workspace
+          cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: runtime/c
+        shell: cmd
+        run: cmake --build build --config Release
+
+      - name: Test (ctest)
+        working-directory: runtime/c/build
+        shell: cmd
+        run: ctest --output-on-failure -C Release
+
+  lsp-test:
+    name: "LSP · npm test"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tooling/lsp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: tooling/lsp/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run LSP tests
+        run: npm test
+
+  syntax-test:
+    name: "Syntax · grammar + corpus"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tooling/syntax/tree-sitter-river
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: tooling/syntax/tree-sitter-river/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate parser
+        run: npm run generate
+
+      - name: Run syntax tests
+        run: npm test
+
+  hdl-drc:
+    name: "HDL · DRC CTest (linux)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo (HDL build)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            backend/rust/target
+          key: rust-linux-${{ hashFiles('backend/rust/Cargo.lock') }}
+          restore-keys: rust-linux-
+
+      - name: Install C++ toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            clang libclang-dev \
+            g++ build-essential
+
+      - name: Configure (cmake + ninja)
+        working-directory: hdl/cpp
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DRIVER_WITH_CXXBRIDGE=ON
+
+      - name: Build
+        working-directory: hdl/cpp
+        run: cmake --build build
+
+      - name: Test (ctest)
+        working-directory: hdl/cpp/build
+        run: ctest --output-on-failure
