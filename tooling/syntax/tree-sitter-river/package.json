@@ -1,0 +1,29 @@
+{
+  "name": "tree-sitter-river",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for RIVER-LANG (.rasm files)",
+  "license": "Apache-2.0",
+  "main": "grammar.js",
+  "keywords": ["tree-sitter", "parser", "river-lang", "rasm"],
+  "dependencies": {
+    "node-addon-api": "^7.0.0",
+    "node-gyp-build": "^4.6.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.22.0"
+  },
+  "scripts": {
+    "build":    "npx tree-sitter generate && node-gyp-build",
+    "generate": "npx tree-sitter generate",
+    "test":     "npx tree-sitter test",
+    "parse":    "npx tree-sitter parse"
+  },
+  "tree-sitter": [
+    {
+      "scope":      "source.rasm",
+      "file-types": ["rasm"],
+      "highlights": "queries/highlights.scm",
+      "locals":     "queries/locals.scm"
+    }
+  ]
+}

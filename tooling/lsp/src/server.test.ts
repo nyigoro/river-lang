@@ -248,6 +248,16 @@ describe('Parser', () => {
     assert.equal(ast.constraints.length, 1);
     assert.equal(ast.constraints[0].value, 1.5);
     assert.equal(ast.constraints[0].unit, 'mm');
+    assert.equal(ast.constraints[0].op, '<=');
+  });
+
+  it('parses #constraint with < operator', () => {
+    const src = `.epoch 0x1;\n.node A @ 0x1 {type:T;}\n.node B @ 0x2 {type:T;}\n#constraint max_dist(A.cry, B) < 1.5mm;`;
+    const { tokens } = tokenize(src);
+    const { ast } = parse(tokens);
+    assert.equal(ast.constraints.length, 1);
+    assert.equal(ast.constraints[0].op, '<');
+    assert.equal(ast.constraints[0].value, 1.5);
   });
 
   it('parses full Fibonacci program without parse errors', () => {

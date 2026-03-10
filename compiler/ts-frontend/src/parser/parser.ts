@@ -92,7 +92,7 @@ export class Parser {
           break;
         }
 
-        // Constraint:  #constraint max_dist(...) < 1.5mm;
+        // Constraint:  #constraint max_dist(...) < 1.5mm; or <= 1.5mm;
         case "Hash":
           graph.constraints.push(this.parseConstraint());
           break;
@@ -352,7 +352,7 @@ export class Parser {
     }
   }
 
-  // ── #constraint max_dist(A [.accessor], B [.accessor]) < 1.5mm; ─────────
+  // ── #constraint max_dist(A [.accessor], B [.accessor]) <|<= 1.5mm; ─────
 
   private parseConstraint(): AstConstraint {
     const startTok = this.consume("Hash");
@@ -367,7 +367,12 @@ export class Parser {
     const bPort = this.consumeAccessor();
 
     this.consume("RParen");
-    this.consume("Lt");
+    const opTok = this.peek();
+    if (opTok.kind === "Lte" || opTok.kind === "Lt") {
+      this.advance();
+    } else {
+      throw new ParseError(`Expected '<' or '<=' in constraint`, opTok);
+    }
 
     const distTok = this.consume("FloatMm");
     const { value, unit } = this.parseFloatMm(distTok.lexeme, distTok);
@@ -379,7 +384,7 @@ export class Parser {
       fn:    "max_dist",
       portA: { node: aName, accessor: aPort },
       portB: { node: bName, accessor: bPort },
-      op:    "<",
+      op:    opTok.kind === "Lte" ? "<=" : "<",
       value,
       unit,
       span:  this.span(startTok, this.prev()),

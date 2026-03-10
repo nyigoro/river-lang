@@ -144,6 +144,11 @@ export class Lexer {
       return this.makeToken("FlowDown", "<~", start, this.pos());
     }
 
+    if (ch === "<" && this.peek(1) === "=") {
+      this.advance(2);
+      return this.makeToken("Lte", "<=", start, this.pos());
+    }
+
     if (ch === "~" && this.peek(1) === ">") {
       this.advance(2);
       return this.makeToken("FlowUp", "~>", start, this.pos());

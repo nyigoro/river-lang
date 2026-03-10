@@ -50,6 +50,7 @@ export type TokenKind =
   | "Semicolon"      // ;
   | "Comma"          // ,
   | "Dot"            // .   standalone
+  | "Lte"            // <=  (inside constraint: <= 1.5mm)
   | "Lt"             // <   (inside constraint: < 1.5mm)
   | "Minus"          // -   (inside sector range: [0x000-0x1FF])
 
@@ -130,6 +131,7 @@ export function describeKind(kind: TokenKind): string {
     Semicolon:   "';'",
     Comma:       "','",
     Dot:         "'.'",
+    Lte:         "'<='",
     Lt:          "'<'",
     Minus:       "'-'",
     HexNumber:   "hexadecimal number",

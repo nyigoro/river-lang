@@ -272,6 +272,12 @@ describe("Constraints", () => {
     const g = parse("#constraint max_dist(A.cry, B) < 2.0mm;");
     assert.equal(g.constraints[0]!.value, 2.0);
   });
+
+  it("parses <= constraint operator", () => {
+    const g = parse("#constraint max_dist(A.cry, B) <= 2.0mm;");
+    assert.equal(g.constraints[0]!.op, "<=");
+    assert.equal(g.constraints[0]!.value, 2.0);
+  });
 });
 
 // ---------------------------------------------------------------------------

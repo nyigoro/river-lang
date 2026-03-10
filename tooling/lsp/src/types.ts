@@ -41,6 +41,7 @@ export enum TokenKind {
   FlowDown, // <~
   FlowUp,   // ~>
   Guard,    // /?
+  Lte,      // <=
   Lt,       // < or <=
   Minus,    // -
 

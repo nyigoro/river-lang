@@ -1,0 +1,36 @@
+{
+  "name": "river-lang-syntax",
+  "displayName": "RIVER-LANG Syntax",
+  "description": "Syntax highlighting support for RIVER-LANG (.rasm) files.",
+  "version": "0.1.0",
+  "publisher": "river-lang",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "rasm",
+        "aliases": [
+          "RVR-ASM",
+          "rasm"
+        ],
+        "extensions": [
+          ".rasm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rasm",
+        "scopeName": "source.rasm",
+        "path": "../river-lang.tmLanguage.json"
+      }
+    ]
+  }
+}

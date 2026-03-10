@@ -1,0 +1,249 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "RIVER-LANG",
+  "scopeName": "source.rasm",
+  "fileTypes": ["rasm"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#directive_epoch" },
+    { "include": "#directive_sector" },
+    { "include": "#directive_node" },
+    { "include": "#directive_reservoir" },
+    { "include": "#constraint" },
+    { "include": "#flow_operator" },
+    { "include": "#nerve_operator" },
+    { "include": "#guard_operator" },
+    { "include": "#port_accessor" },
+    { "include": "#self_purge" },
+    { "include": "#number_hex" },
+    { "include": "#number_float_mm" },
+    { "include": "#number_dec" },
+    { "include": "#property_keyword" },
+    { "include": "#boolean" },
+    { "include": "#identifier" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+
+    "comment": {
+      "name": "comment.line.double-slash.rasm",
+      "match": "//.*$"
+    },
+
+    "directive_epoch": {
+      "match": "(\\.epoch)\\s+(0x[0-9A-Fa-f]+)",
+      "captures": {
+        "1": { "name": "keyword.control.directive.epoch.rasm" },
+        "2": { "name": "constant.numeric.hex.epoch.rasm" }
+      }
+    },
+
+    "directive_sector": {
+      "name": "meta.sector.rasm",
+      "match": "(\\.sector)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\[)\\s*(0x[0-9A-Fa-f]+)\\s*(-)\\s*(0x[0-9A-Fa-f]+)\\s*(\\])",
+      "captures": {
+        "1": { "name": "keyword.control.directive.sector.rasm" },
+        "2": { "name": "entity.name.type.sector.rasm" },
+        "3": { "name": "punctuation.bracket.rasm" },
+        "4": { "name": "constant.numeric.hex.address.rasm" },
+        "5": { "name": "keyword.operator.range.rasm" },
+        "6": { "name": "constant.numeric.hex.address.rasm" },
+        "7": { "name": "punctuation.bracket.rasm" }
+      }
+    },
+
+    "directive_node": {
+      "name": "meta.node.declaration.rasm",
+      "begin": "(\\.node)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(@)\\s*(0x[0-9A-Fa-f]+)\\s*(\\{)",
+      "end": "(\\})",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.directive.node.rasm" },
+        "2": { "name": "entity.name.function.node.rasm" },
+        "3": { "name": "keyword.operator.at.rasm" },
+        "4": { "name": "constant.numeric.hex.address.rasm" },
+        "5": { "name": "punctuation.definition.block.begin.rasm" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.block.end.rasm" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#node_body" }
+      ]
+    },
+
+    "node_body": {
+      "patterns": [
+        {
+          "match": "(type|tag|fire_on|sector|target)\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.other.property.rasm" },
+            "2": { "name": "punctuation.separator.colon.rasm" },
+            "3": { "name": "string.unquoted.value.rasm" }
+          }
+        },
+        { "include": "#punctuation" }
+      ]
+    },
+
+    "directive_reservoir": {
+      "name": "meta.reservoir.declaration.rasm",
+      "begin": "(@reservoir)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(@)\\s*(0x[0-9A-Fa-f]+)\\s*(\\{)",
+      "end": "(\\})",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.directive.reservoir.rasm" },
+        "2": { "name": "entity.name.type.reservoir.rasm" },
+        "3": { "name": "keyword.operator.at.rasm" },
+        "4": { "name": "constant.numeric.hex.address.rasm" },
+        "5": { "name": "punctuation.definition.block.begin.rasm" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.block.end.rasm" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#reservoir_body" }
+      ]
+    },
+
+    "reservoir_body": {
+      "patterns": [
+        {
+          "match": "(arity)\\s*(:)\\s*([0-9]+)",
+          "captures": {
+            "1": { "name": "keyword.other.property.rasm" },
+            "2": { "name": "punctuation.separator.colon.rasm" },
+            "3": { "name": "constant.numeric.integer.rasm" }
+          }
+        },
+        {
+          "match": "(handshake)\\s*(:)\\s*(true|false)",
+          "captures": {
+            "1": { "name": "keyword.other.property.rasm" },
+            "2": { "name": "punctuation.separator.colon.rasm" },
+            "3": { "name": "constant.language.boolean.rasm" }
+          }
+        },
+        {
+          "match": "(on_dry)\\s*(:)\\s*(self\\.purge\\(\\))",
+          "captures": {
+            "1": { "name": "keyword.other.property.rasm" },
+            "2": { "name": "punctuation.separator.colon.rasm" },
+            "3": { "name": "support.function.builtin.self-purge.rasm" }
+          }
+        },
+        { "include": "#punctuation" }
+      ]
+    },
+
+    "constraint": {
+      "name": "meta.constraint.rasm",
+      "match": "(#)(constraint)\\s+(max_dist)\\s*(\\()([A-Za-z_][A-Za-z0-9_]*)(\\.(?:cry|TRUE|FALSE|out))?\\s*(,)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\.(?:cry|TRUE|FALSE|out))?(\\))\\s*(<=|<)\\s*([0-9]+(?:\\.[0-9]+)?)(mm)",
+      "captures": {
+        "1":  { "name": "punctuation.definition.constraint.rasm" },
+        "2":  { "name": "keyword.control.constraint.rasm" },
+        "3":  { "name": "support.function.constraint.max-dist.rasm" },
+        "4":  { "name": "punctuation.definition.parameters.begin.rasm" },
+        "5":  { "name": "variable.other.node.rasm" },
+        "6":  { "name": "variable.other.port-accessor.rasm" },
+        "7":  { "name": "punctuation.separator.comma.rasm" },
+        "8":  { "name": "variable.other.node.rasm" },
+        "9":  { "name": "variable.other.port-accessor.rasm" },
+        "10": { "name": "punctuation.definition.parameters.end.rasm" },
+        "11": { "name": "keyword.operator.comparison.rasm" },
+        "12": { "name": "constant.numeric.float.distance.rasm" },
+        "13": { "name": "keyword.other.unit.mm.rasm" }
+      }
+    },
+
+    "flow_operator": {
+      "name": "meta.flow.downstream.rasm",
+      "match": "([A-Za-z_][A-Za-z0-9_]*)(\\.(?:TRUE|FALSE|out))?\\s*(<~)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\.(?:cry|TRUE|FALSE|out))?",
+      "captures": {
+        "1": { "name": "variable.other.node.destination.rasm" },
+        "2": { "name": "variable.other.port-accessor.destination.rasm" },
+        "3": { "name": "keyword.operator.flow.downstream.rasm" },
+        "4": { "name": "variable.other.node.source.rasm" },
+        "5": { "name": "variable.other.port-accessor.source.rasm" }
+      }
+    },
+
+    "nerve_operator": {
+      "name": "meta.flow.nerve.rasm",
+      "match": "([A-Za-z_][A-Za-z0-9_]*)(\\.(cry))\\s*(~>)\\s*([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "variable.other.node.cry-source.rasm" },
+        "2": { "name": "variable.other.port-accessor.cry.rasm" },
+        "3": { "name": "support.type.property-name.cry.rasm" },
+        "4": { "name": "keyword.operator.flow.upstream.nerve.rasm" },
+        "5": { "name": "variable.other.node.nerve-destination.rasm" }
+      }
+    },
+
+    "guard_operator": {
+      "name": "keyword.operator.guard.rasm",
+      "match": "/\\?"
+    },
+
+    "port_accessor": {
+      "patterns": [
+        { "match": "\\.cry",   "name": "variable.other.port-accessor.cry.rasm" },
+        { "match": "\\.TRUE",  "name": "variable.other.port-accessor.true.rasm" },
+        { "match": "\\.FALSE", "name": "variable.other.port-accessor.false.rasm" },
+        { "match": "\\.out",   "name": "variable.other.port-accessor.out.rasm" }
+      ]
+    },
+
+    "self_purge": {
+      "name": "support.function.builtin.self-purge.rasm",
+      "match": "self\\.purge\\(\\)"
+    },
+
+    "number_hex": {
+      "name": "constant.numeric.hex.rasm",
+      "match": "0x[0-9A-Fa-f]+"
+    },
+
+    "number_float_mm": {
+      "name": "constant.numeric.float.distance.rasm",
+      "match": "[0-9]+\\.[0-9]+mm",
+      "captures": {
+        "0": { "name": "constant.numeric.float.distance.rasm" }
+      }
+    },
+
+    "number_dec": {
+      "name": "constant.numeric.integer.rasm",
+      "match": "\\b[0-9]+\\b"
+    },
+
+    "property_keyword": {
+      "name": "keyword.other.property.rasm",
+      "match": "\\b(type|tag|fire_on|arity|handshake|on_dry|sector|target|max_dist)\\b"
+    },
+
+    "boolean": {
+      "name": "constant.language.boolean.rasm",
+      "match": "\\b(true|false)\\b"
+    },
+
+    "identifier": {
+      "name": "variable.other.identifier.rasm",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+    },
+
+    "punctuation": {
+      "patterns": [
+        { "match": ";",  "name": "punctuation.terminator.statement.rasm" },
+        { "match": ":",  "name": "punctuation.separator.colon.rasm" },
+        { "match": ",",  "name": "punctuation.separator.comma.rasm" },
+        { "match": "\\{","name": "punctuation.definition.block.begin.rasm" },
+        { "match": "\\}","name": "punctuation.definition.block.end.rasm" },
+        { "match": "\\[","name": "punctuation.bracket.begin.rasm" },
+        { "match": "\\]","name": "punctuation.bracket.end.rasm" },
+        { "match": "\\(","name": "punctuation.definition.parameters.begin.rasm" },
+        { "match": "\\)","name": "punctuation.definition.parameters.end.rasm" }
+      ]
+    }
+  }
+}

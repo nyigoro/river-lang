@@ -276,6 +276,23 @@ describe("Constraints", () => {
       ]
     );
   });
+
+  it("tokenizes <= in constraint line", () => {
+    assert.deepEqual(
+      kinds("#constraint max_dist(Fibonacci_Adder.cry, Feedback_Merge) <= 1.5mm;"),
+      [
+        "Hash", "KwConstraint", "KwMaxDist",
+        "LParen",
+        "Identifier", "DotCry",
+        "Comma",
+        "Identifier",
+        "RParen",
+        "Lte", "FloatMm",
+        "Semicolon",
+        "EOF"
+      ]
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

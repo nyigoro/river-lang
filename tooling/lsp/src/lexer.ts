@@ -54,7 +54,7 @@ export class Lexer {
     }
     if (ch === '<' && this.peek(1) === '=') {
       this.advance(2);
-      return this.makeToken(TokenKind.Lt, '<=', start, this.currentPos());
+      return this.makeToken(TokenKind.Lte, '<=', start, this.currentPos());
     }
     if (ch === '~' && this.peek(1) === '>') {
       this.advance(2);

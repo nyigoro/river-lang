@@ -294,9 +294,15 @@ class Parser {
     const portB = this.parsePortRef();
     this.expectPunct(TokenKind.RParen, ')');
 
-    // operator: <=
-    this.consumeIf(TokenKind.Lt);
-    this.consumeIf(TokenKind.Minus); // no <=, might be just <
+    // operator: < or <=
+    let op: AstConstraint['op'] = '<=';
+    if (this.consumeIf(TokenKind.Lte)) {
+      op = '<=';
+    } else if (this.consumeIf(TokenKind.Lt)) {
+      op = '<';
+    } else {
+      this.error("Expected '<' or '<=' in constraint", this.spanOf(this.cur()));
+    }
 
     const valTok = this.expect(TokenKind.FloatMm, 'Expected distance value (e.g. 1.5mm)');
     this.consumeIf(TokenKind.Semicolon);
@@ -307,7 +313,7 @@ class Parser {
     return {
       fn:    fnTok.text,
       portA, portB,
-      op:    '<=',
+      op,
       value: parseFloat(raw),
       unit:  'mm',
       span:  { start, end: this.prevEnd() },

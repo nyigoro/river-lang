@@ -1,0 +1,246 @@
+================================================================================
+Epoch directive
+================================================================================
+
+.epoch 0x52495645;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (epoch_directive
+    (hex_number)))
+
+================================================================================
+Sector directive
+================================================================================
+
+.sector Alpha [0x000 - 0x1FF];
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (sector_directive
+    (identifier)
+    (hex_number)
+    (hex_number)))
+
+================================================================================
+Node declaration — minimal
+================================================================================
+
+.node Foo @ 0x00A0 {
+  type: TOKEN_GEN;
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (node_declaration
+    (identifier)
+    (hex_number)
+    (node_body
+      (node_property
+        (property_key)
+        (property_value
+          (identifier))))))
+
+================================================================================
+Node declaration — all properties
+================================================================================
+
+.node Seed_Gen @ 0x00A0 {
+  type: TOKEN_GEN;
+  tag: FIBONACCI;
+  fire_on: BOTH;
+  sector: Alpha;
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (node_declaration
+    (identifier)
+    (hex_number)
+    (node_body
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier))))))
+
+================================================================================
+Reservoir declaration
+================================================================================
+
+@reservoir Final_Output @ 0x0300 {
+  arity: 1;
+  handshake: true;
+  on_dry: self.purge();
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (reservoir_declaration
+    (identifier)
+    (hex_number)
+    (reservoir_body
+      (reservoir_property (dec_number))
+      (reservoir_property (boolean_literal))
+      (reservoir_property (on_dry_value)))))
+
+================================================================================
+Downstream flow — bare nodes
+================================================================================
+
+Feedback_Merge <~ Seed_Gen;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (flow_statement
+    (port_ref (identifier))
+    (port_ref (identifier))))
+
+================================================================================
+Downstream flow — with port accessor
+================================================================================
+
+Feedback_Merge <~ Exit_Gate.TRUE;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (flow_statement
+    (port_ref (identifier))
+    (port_ref (identifier) (port_accessor))))
+
+================================================================================
+Upstream nerve
+================================================================================
+
+Fibonacci_Adder.cry ~> Feedback_Merge;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (nerve_statement
+    (port_ref (identifier) (port_accessor))
+    (port_ref (identifier))))
+
+================================================================================
+Constraint statement
+================================================================================
+
+#constraint max_dist(Fibonacci_Adder.cry, Feedback_Merge) <= 1.5mm;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (constraint_statement
+    (constraint_fn)
+    (port_ref (identifier) (port_accessor))
+    (port_ref (identifier))
+    (distance_literal)))
+
+================================================================================
+Line comment
+================================================================================
+
+// This is a comment
+.epoch 0x1;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (comment)
+  (epoch_directive (hex_number)))
+
+================================================================================
+Full Fibonacci channel graph
+================================================================================
+
+.epoch 0x52495645;
+.sector Alpha [0x000 - 0x1FF];
+.sector Beta  [0x200 - 0x3FF];
+
+.node Seed_Gen @ 0x00A0 {
+  type: TOKEN_GEN;
+  sector: Alpha;
+}
+
+.node Fibonacci_Adder @ 0x00C8 {
+  type: ALU_ADD;
+  sector: Alpha;
+}
+
+.node Exit_Gate @ 0x0210 {
+  type: COND_GATE;
+  sector: Beta;
+}
+
+@reservoir Final_Output @ 0x0300 {
+  arity: 1;
+  handshake: true;
+  on_dry: self.purge();
+}
+
+Final_Output <~ Exit_Gate.FALSE;
+Exit_Gate <~ Fibonacci_Adder;
+Fibonacci_Adder.cry ~> Seed_Gen;
+
+#constraint max_dist(Fibonacci_Adder.cry, Seed_Gen) <= 1.5mm;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (epoch_directive (hex_number))
+  (sector_directive (identifier) (hex_number) (hex_number))
+  (sector_directive (identifier) (hex_number) (hex_number))
+  (node_declaration (identifier) (hex_number)
+    (node_body
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier)))))
+  (node_declaration (identifier) (hex_number)
+    (node_body
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier)))))
+  (node_declaration (identifier) (hex_number)
+    (node_body
+      (node_property (property_key) (property_value (identifier)))
+      (node_property (property_key) (property_value (identifier)))))
+  (reservoir_declaration (identifier) (hex_number)
+    (reservoir_body
+      (reservoir_property (dec_number))
+      (reservoir_property (boolean_literal))
+      (reservoir_property (on_dry_value))))
+  (flow_statement (port_ref (identifier)) (port_ref (identifier) (port_accessor)))
+  (flow_statement (port_ref (identifier)) (port_ref (identifier)))
+  (nerve_statement (port_ref (identifier) (port_accessor)) (port_ref (identifier)))
+  (constraint_statement (constraint_fn)
+    (port_ref (identifier) (port_accessor))
+    (port_ref (identifier))
+    (distance_literal)))
+================================================================================
+Guarded flow and nerve
+================================================================================
+
+.node A @ 0x0010 { type: TOKEN_GEN; }
+.node B @ 0x0012 { type: ALU_ADD; }
+B <~ A /? safe;
+A.cry ~> B /? retry;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (node_declaration (identifier) (hex_number)
+    (node_body (node_property (property_key) (property_value (identifier)))))
+  (node_declaration (identifier) (hex_number)
+    (node_body (node_property (property_key) (property_value (identifier)))))
+  (flow_statement
+    (port_ref (identifier))
+    (port_ref (identifier))
+    (guard_clause (identifier)))
+  (nerve_statement
+    (port_ref (identifier) (port_accessor))
+    (port_ref (identifier))
+    (guard_clause (identifier))))
