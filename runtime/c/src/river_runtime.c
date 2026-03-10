@@ -17,6 +17,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "river_runtime.h"
 
@@ -66,17 +69,37 @@ void river_secure_zero(void *ptr, size_t len) {
 /* ── Clocks ────────────────────────────────────────────────────────────────── */
 
 uint32_t river_now_ms(void) {
+#ifdef _WIN32
+    static LARGE_INTEGER freq = {0};
+    LARGE_INTEGER now;
+    if (freq.QuadPart == 0) {
+        QueryPerformanceFrequency(&freq);
+    }
+    QueryPerformanceCounter(&now);
+    return (uint32_t)((now.QuadPart * 1000ull) / (uint64_t)freq.QuadPart);
+#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint32_t)((uint64_t)ts.tv_sec * 1000u
                     + (uint64_t)ts.tv_nsec / 1000000u);
+#endif
 }
 
 uint64_t river_now_ns(void) {
+#ifdef _WIN32
+    static LARGE_INTEGER freq = {0};
+    LARGE_INTEGER now;
+    if (freq.QuadPart == 0) {
+        QueryPerformanceFrequency(&freq);
+    }
+    QueryPerformanceCounter(&now);
+    return (uint64_t)((now.QuadPart * 1000000000ull) / (uint64_t)freq.QuadPart);
+#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000000ull
          + (uint64_t)ts.tv_nsec;
+#endif
 }
 
 /**

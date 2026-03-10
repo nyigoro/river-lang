@@ -172,8 +172,8 @@ jobs:
       - name: Configure (cmake + ninja)
         working-directory: hdl/cpp
         run: |
-          cargo build -p geologist-backend --manifest-path backend/rust/Cargo.toml
-          CXXBRIDGE_DIR=$(ls -d backend/rust/target/debug/build/geologist-backend-*/out/cxxbridge/include | head -n 1)
+          cargo build -p geologist-backend --manifest-path "$GITHUB_WORKSPACE/backend/rust/Cargo.toml"
+          CXXBRIDGE_DIR=$(ls -d "$GITHUB_WORKSPACE"/backend/rust/target/debug/build/geologist-backend-*/out/cxxbridge/include | head -n 1)
           if [ -z "$CXXBRIDGE_DIR" ]; then
             echo "cxxbridge include dir not found" >&2
             exit 1
