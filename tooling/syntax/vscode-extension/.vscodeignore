@@ -1,0 +1,13 @@
+# Exclude development artifacts from VSIX
+node_modules/**
+server/**
+*.vsix
+
+# Source TS (compiled JS is in out/)
+src/**
+
+# Build/test leftovers
+npm-debug.log
+pnpm-debug.log
+yarn-debug.log
+yarn-error.log
