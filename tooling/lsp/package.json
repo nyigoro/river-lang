@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "watch": "tsc --project tsconfig.json --watch",
-    "test": "node --test dist/server.test.js",
+    "build:test": "tsc --project tsconfig.test.json",
+    "test": "npm run build && npm run build:test && node --test dist/tests/server.test.js",
     "start": "node dist/server.js --stdio"
   },
   "dependencies": {

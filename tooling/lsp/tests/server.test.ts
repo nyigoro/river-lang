@@ -6,10 +6,10 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { tokenize }  from './lexer';
-import { parse }     from './parser';
-import { analyse }   from './analyser';
-import { TokenKind } from './types';
+import { tokenize }  from '../src/lexer';
+import { parse }     from '../src/parser';
+import { analyse }   from '../src/analyser';
+import { TokenKind } from '../src/types';
 
 // ── Canonical Fibonacci program ────────────────────────────────────────────────
 
