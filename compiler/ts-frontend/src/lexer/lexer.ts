@@ -99,9 +99,7 @@ export class Lexer {
 
       // Newline
       if (ch === "\n") {
-        this.i++;
-        this.line++;
-        this.column = 1;
+        this.advance();
         continue;
       }
 

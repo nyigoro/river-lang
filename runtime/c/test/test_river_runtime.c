@@ -278,7 +278,7 @@ TEST(river_load_truncated_manifest) {
 TEST(river_load_wrong_epoch) {
     uint8_t buf[512];
     size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
-    uint32_t wrong_epoch = 0xDEAD_BEEFu;
+    uint32_t wrong_epoch = 0xDEADBEEFu;
     memcpy(buf + 4, &wrong_epoch, 4);
     const char *path = write_temp_rvr(buf, len);
     if (!path) { printf("SKIP\n"); return; }
