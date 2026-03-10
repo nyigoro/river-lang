@@ -1,0 +1,672 @@
+[
+  {
+    "type": "boolean_literal",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "constraint_statement",
+    "named": true,
+    "fields": {
+      "distance": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "distance_literal",
+            "named": true
+          }
+        ]
+      },
+      "fn": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "constraint_fn",
+            "named": true
+          }
+        ]
+      },
+      "keyword": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "kw_constraint",
+            "named": true
+          }
+        ]
+      },
+      "op": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "<",
+            "named": false
+          },
+          {
+            "type": "<=",
+            "named": false
+          }
+        ]
+      },
+      "port_a": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      },
+      "port_b": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "epoch_directive",
+    "named": true,
+    "fields": {
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "hex_number",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "flow_statement",
+    "named": true,
+    "fields": {
+      "destination": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      },
+      "guard": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "guard_clause",
+            "named": true
+          }
+        ]
+      },
+      "source": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "guard_clause",
+    "named": true,
+    "fields": {
+      "predicate": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "nerve_statement",
+    "named": true,
+    "fields": {
+      "cry_source": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      },
+      "guard": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "guard_clause",
+            "named": true
+          }
+        ]
+      },
+      "nerve_destination": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "port_ref",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "node_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "node_property",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "node_declaration",
+    "named": true,
+    "fields": {
+      "address": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "hex_number",
+            "named": true
+          }
+        ]
+      },
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "node_body",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "node_property",
+    "named": true,
+    "fields": {
+      "key": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "property_key",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "property_value",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "on_dry_value",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "port_accessor",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "port_ref",
+    "named": true,
+    "fields": {
+      "accessor": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "port_accessor",
+            "named": true
+          }
+        ]
+      },
+      "node": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "property_key",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "property_value",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "dec_number",
+          "named": true
+        },
+        {
+          "type": "hex_number",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "reservoir_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "reservoir_property",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "reservoir_declaration",
+    "named": true,
+    "fields": {
+      "address": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "hex_number",
+            "named": true
+          }
+        ]
+      },
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "reservoir_body",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "reservoir_property",
+    "named": true,
+    "fields": {
+      "key": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "kw_arity",
+            "named": true
+          },
+          {
+            "type": "kw_handshake",
+            "named": true
+          },
+          {
+            "type": "kw_on_dry",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "dec_number",
+            "named": true
+          },
+          {
+            "type": "on_dry_value",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "sector_directive",
+    "named": true,
+    "fields": {
+      "end": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "hex_number",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "start": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "hex_number",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "source_file",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "constraint_statement",
+          "named": true
+        },
+        {
+          "type": "epoch_directive",
+          "named": true
+        },
+        {
+          "type": "flow_statement",
+          "named": true
+        },
+        {
+          "type": "nerve_statement",
+          "named": true
+        },
+        {
+          "type": "node_declaration",
+          "named": true
+        },
+        {
+          "type": "reservoir_declaration",
+          "named": true
+        },
+        {
+          "type": "sector_directive",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "#",
+    "named": false
+  },
+  {
+    "type": "(",
+    "named": false
+  },
+  {
+    "type": ")",
+    "named": false
+  },
+  {
+    "type": ",",
+    "named": false
+  },
+  {
+    "type": "-",
+    "named": false
+  },
+  {
+    "type": ".FALSE",
+    "named": false
+  },
+  {
+    "type": ".TRUE",
+    "named": false
+  },
+  {
+    "type": ".cry",
+    "named": false
+  },
+  {
+    "type": ".epoch",
+    "named": false
+  },
+  {
+    "type": ".node",
+    "named": false
+  },
+  {
+    "type": ".out",
+    "named": false
+  },
+  {
+    "type": ".sector",
+    "named": false
+  },
+  {
+    "type": "/?",
+    "named": false
+  },
+  {
+    "type": ":",
+    "named": false
+  },
+  {
+    "type": ";",
+    "named": false
+  },
+  {
+    "type": "<",
+    "named": false
+  },
+  {
+    "type": "<=",
+    "named": false
+  },
+  {
+    "type": "<~",
+    "named": false
+  },
+  {
+    "type": "@",
+    "named": false
+  },
+  {
+    "type": "@reservoir",
+    "named": false
+  },
+  {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
+    "named": false
+  },
+  {
+    "type": "comment",
+    "named": true
+  },
+  {
+    "type": "constraint_fn",
+    "named": true
+  },
+  {
+    "type": "dec_number",
+    "named": true
+  },
+  {
+    "type": "distance_literal",
+    "named": true
+  },
+  {
+    "type": "false",
+    "named": false
+  },
+  {
+    "type": "fire_on",
+    "named": false
+  },
+  {
+    "type": "hex_number",
+    "named": true
+  },
+  {
+    "type": "identifier",
+    "named": true
+  },
+  {
+    "type": "kw_arity",
+    "named": true
+  },
+  {
+    "type": "kw_constraint",
+    "named": true
+  },
+  {
+    "type": "kw_handshake",
+    "named": true
+  },
+  {
+    "type": "kw_on_dry",
+    "named": true
+  },
+  {
+    "type": "sector",
+    "named": false
+  },
+  {
+    "type": "self.purge()",
+    "named": false
+  },
+  {
+    "type": "tag",
+    "named": false
+  },
+  {
+    "type": "target",
+    "named": false
+  },
+  {
+    "type": "true",
+    "named": false
+  },
+  {
+    "type": "type",
+    "named": false
+  },
+  {
+    "type": "{",
+    "named": false
+  },
+  {
+    "type": "}",
+    "named": false
+  },
+  {
+    "type": "~>",
+    "named": false
+  }
+]
