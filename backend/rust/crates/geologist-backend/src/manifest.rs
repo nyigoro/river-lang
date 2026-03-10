@@ -5,6 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::bridge::ffi;
+
 // ---------------------------------------------------------------------------
 // File constants
 // ---------------------------------------------------------------------------
@@ -158,5 +160,68 @@ impl RvrManifest {
             sector_map,
             manifest_length: self.instruction_bytes() as u32,
         });
+    }
+
+    pub fn get_map_nodes(&self) -> Vec<ffi::MapNodeEntry> {
+        self.instructions
+            .iter()
+            .filter_map(|instr| match instr {
+                Instruction::MapNode {
+                    node_id,
+                    address,
+                    salted_hash,
+                } => Some(ffi::MapNodeEntry {
+                    node_id: *node_id,
+                    address: *address,
+                    salted_hash: *salted_hash,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn get_constraints(&self) -> Vec<ffi::SetConstraintEntry> {
+        self.instructions
+            .iter()
+            .filter_map(|instr| match instr {
+                Instruction::SetConstraint {
+                    node_a,
+                    node_b,
+                    max_dist_um,
+                } => Some(ffi::SetConstraintEntry {
+                    node_a: *node_a,
+                    node_b: *node_b,
+                    max_dist_um: *max_dist_um,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn get_epoch(&self) -> u32 {
+        self.header
+            .as_ref()
+            .map(|header| header.epoch_id)
+            .unwrap_or(0)
+    }
+
+    pub fn get_links(&self) -> Vec<ffi::LinkFlowEntry> {
+        self.instructions
+            .iter()
+            .filter_map(|instr| match instr {
+                Instruction::LinkFlow { src, dest } => {
+                    let is_upstream = (*src & LINK_FLAG_UPSTREAM) != 0;
+                    let src_node = *src & LINK_NODE_MASK;
+                    let dest_node = *dest & LINK_NODE_MASK;
+                    Some(ffi::LinkFlowEntry {
+                        is_upstream,
+                        _pad: 0,
+                        src_node,
+                        dest_node,
+                    })
+                }
+                _ => None,
+            })
+            .collect()
     }
 }

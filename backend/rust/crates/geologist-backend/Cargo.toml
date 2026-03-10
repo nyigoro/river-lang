@@ -2,9 +2,14 @@
 name = "geologist-backend"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1"
 blake3 = "=1.5.4"
+cxx = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[build-dependencies]
+cxx-build = "1"

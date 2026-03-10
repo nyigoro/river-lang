@@ -7,10 +7,12 @@ pub mod emitter;
 pub mod manifest;
 pub mod path_auditor;
 pub mod spatial_mapper;
+pub mod bridge;
 
 use anyhow::{anyhow, bail, Context, Result};
 
 use emitter::emit_with_sector_map;
+use crate::bridge::ffi;
 use manifest::{
     Instruction, RvrManifest, LINK_FLAG_FALSE_BRANCH, LINK_FLAG_TRUE_BRANCH, LINK_FLAG_UPSTREAM,
     LINK_NODE_MASK, RES_FLAG_HASH_CHECK, RES_FLAG_PURGE_ON_DRY,
@@ -267,6 +269,18 @@ pub fn compile_manifest(ast_json: &str) -> Result<RvrManifest> {
     let audit = audit(&manifest.instructions, &sectors);
     if !audit.ok {
         bail!("Path audit failed:\n{}", audit.details.join("\n"));
+    }
+
+    let drc_violations = ffi::run_structural_drc(&manifest);
+    if !drc_violations.is_empty() {
+        let mut details = Vec::new();
+        for violation in drc_violations {
+            details.push(format!(
+                "constraint: node_a={} node_b={} max_dist_um={} actual_dist_um={}",
+                violation.node_a, violation.node_b, violation.max_dist_um, violation.actual_dist_um
+            ));
+        }
+        bail!("Structural DRC failed:\n{}", details.join("\n"));
     }
 
     let sector_mask = sector_map_mask(graph.sectors.len())?;
