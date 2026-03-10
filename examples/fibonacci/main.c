@@ -164,8 +164,13 @@ int main(int argc, char **argv) {
 
 #ifdef _WIN32
         static char path[256];
-        snprintf(path, sizeof(path), "%s\\river_demo.rvr",
-                 getenv("TEMP") ? getenv("TEMP") : ".");
+        char temp_dir[128];
+        size_t needed = 0;
+        const char *base = ".";
+        if (getenv_s(&needed, temp_dir, sizeof(temp_dir), "TEMP") == 0 && needed > 0) {
+            base = temp_dir;
+        }
+        snprintf(path, sizeof(path), "%s\\river_demo.rvr", base);
         tmp_path = path;
 #else
         tmp_path = "/tmp/river_demo.rvr";
@@ -244,4 +249,3 @@ int main(int argc, char **argv) {
         return 1;
     }
 }
-
