@@ -24,7 +24,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include "river_hw.h"
 #include "river_runtime.h"
