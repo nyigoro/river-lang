@@ -102,15 +102,48 @@ uint64_t river_now_ns(void) {
 #endif
 }
 
+/* ── Epoch + salt helpers ─────────────────────────────────────────────────── */
+
+static uint32_t g_epoch = RIVER_EPOCH_BASE;
+
 /**
  * Hardware epoch counter.
  *
- * One epoch = one T_frame = 64ns.
- * Simulation: derives from the monotonic nanosecond clock.
+ * Simulation: uses a monotonic epoch register seeded from RIVER_EPOCH_BASE.
  * Production: reads the chip's epoch register via memory-mapped I/O.
  */
 uint32_t river_get_epoch(void) {
-    return (uint32_t)(river_now_ns() / 64ull);
+    if (g_epoch == 0) {
+        g_epoch = RIVER_EPOCH_BASE;
+    }
+    return g_epoch;
+}
+
+uint32_t river_epoch_advance(void) {
+    if (g_epoch == 0) {
+        g_epoch = RIVER_EPOCH_BASE;
+    }
+    g_epoch += 1u;
+    if (g_epoch == 0) {
+        g_epoch = 1u;
+    }
+    return g_epoch;
+}
+
+/**
+ * Simulation salt rotation.
+ *
+ * Hardware uses BLAKE3-Lite; simulation uses a compact mix to keep salt
+ * changes deterministic without pulling in a crypto dependency.
+ */
+uint32_t river_salt_rotate(uint32_t current_salt, uint32_t epoch) {
+    uint32_t v = current_salt ^ epoch;
+    v ^= v >> 16;
+    v *= 0x7FEB352Du;
+    v ^= v >> 15;
+    v *= 0x846CA68Bu;
+    v ^= v >> 16;
+    return (v == 0) ? 1u : v;
 }
 
 /* ── TAG palette ───────────────────────────────────────────────────────────── */
@@ -254,11 +287,18 @@ river_t river_load(const char *rvr_path) {
         free(buf); return NULL;
     }
 
+    /* Validate manifest epoch against hardware epoch register */
+    if (hdr.epoch_id != river_get_epoch()) {
+        free(buf);
+        return NULL;
+    }
+
     river_state_t *s = river_state_alloc();
     if (!s) { free(buf); return NULL; }
 
     s->header   = hdr;
     s->sim_mode = 1;
+    s->epoch_validated = 1;
 
     uint32_t set_epoch = 0;
     int has_set_epoch = 0;

@@ -143,6 +143,12 @@ export interface LspDiag {
   message: string;
   hint?: string;
   span: Span;
+  related?: RelatedInformation[];
+}
+
+export interface RelatedInformation {
+  message: string;
+  span: Span;
 }
 
 export type SymbolKind = 'node' | 'sector' | 'reservoir';

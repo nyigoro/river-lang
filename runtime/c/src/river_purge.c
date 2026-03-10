@@ -33,6 +33,17 @@ void river_purge(river_t r) {
     r->pain_hash   = 0;
     r->last_error[0] = '\0';
 
+    /*
+     * Advance the epoch and rotate the session salt.
+     * Hardware: BLAKE3-Lite salt rotation seeded by the new epoch.
+     * Simulation: deterministic mix via river_salt_rotate().
+     */
+    {
+        uint32_t next_epoch = river_epoch_advance();
+        uint32_t base_salt = r->enclave.session_salt ? r->enclave.session_salt : RIVER_SALT_SEED;
+        r->enclave.session_salt = river_salt_rotate(base_salt, next_epoch);
+    }
+
     /* Simulation: mark purge completed immediately */
     /* Hardware: would block on IRQ_PURGE_COMPLETED from the Reservoir */
 }
@@ -55,16 +66,7 @@ river_status_t river_respawn(river_t r, token_t input, int attempts) {
             return RIVER_ERR_FATAL;
         }
 
-        /*
-         * 3. Rotate the session salt.
-         * Hardware: the Enclave generates a new 32-bit primitive using
-         * BLAKE3-Lite seeded from the current salt XOR hardware_nonce.
-         * Simulation: increment the salt by a prime step.
-         */
-        r->enclave.session_salt ^= 0x9E3779B9u; /* golden ratio step */
-        r->enclave.session_salt  = r->enclave.session_salt * 0x6C62272Eu + 1u;
-
-        /* 4. Spawn on the new salt */
+        /* 3. Spawn on the new salt */
         river_status_t status = river_spawn(r, input);
         if (status == RIVER_OK) return RIVER_OK;
 

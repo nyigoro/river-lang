@@ -35,12 +35,18 @@ export class ParseError extends Error {
   }
 }
 
+export interface ParseResult {
+  ast: ChannelGraphAst;
+  errors: ParseError[];
+}
+
 // ---------------------------------------------------------------------------
 // Parser class
 // ---------------------------------------------------------------------------
 
 export class Parser {
   private i = 0;
+  public readonly errors: ParseError[] = [];
 
   constructor(private readonly tokens: Token[]) {}
 
@@ -63,45 +69,76 @@ export class Parser {
 
       switch (tok.kind) {
         case "DotEpoch":
-          graph.epoch = this.parseEpoch();
+          try {
+            graph.epoch = this.parseEpoch();
+          } catch (err) {
+            if (!this.captureError(err)) throw err;
+            this.syncToTopLevel();
+          }
           break;
 
         case "DotSector":
-          graph.sectors.push(this.parseSector());
+          try {
+            const sector = this.parseSector();
+            if (sector) graph.sectors.push(sector);
+          } catch (err) {
+            if (!this.captureError(err)) throw err;
+            this.syncToTopLevel();
+          }
           break;
 
         case "DotNode":
-          graph.nodes.push(this.parseNode());
+          try {
+            const node = this.parseNode();
+            if (node) graph.nodes.push(node);
+          } catch (err) {
+            if (!this.captureError(err)) throw err;
+            this.syncToTopLevel();
+          }
           break;
 
         case "Reservoir":
-          if (graph.reservoir !== null) {
-            throw new ParseError("Only one @reservoir is allowed per program", tok);
+          try {
+            const res = this.parseReservoir();
+            if (res) {
+              if (graph.reservoir !== null) {
+                this.errors.push(new ParseError("Only one @reservoir is allowed per program", tok));
+              } else {
+                graph.reservoir = res;
+              }
+            }
+          } catch (err) {
+            if (!this.captureError(err)) throw err;
+            this.syncToTopLevel();
           }
-          graph.reservoir = this.parseReservoir();
           break;
 
         // Downstream flow:  Destination <~ Source;
         case "Identifier": {
           const flow = this.parseFlowStatement();
-          if (flow.direction === "DOWN") {
-            graph.flows.push(flow);
-          } else {
-            graph.nerves.push(flow);
+          if (flow) {
+            if (flow.direction === "DOWN") {
+              graph.flows.push(flow);
+            } else {
+              graph.nerves.push(flow);
+            }
           }
           break;
         }
 
         // Constraint:  #constraint max_dist(...) < 1.5mm; or <= 1.5mm;
-        case "Hash":
-          graph.constraints.push(this.parseConstraint());
+        case "Hash": {
+          const constraint = this.parseConstraint();
+          if (constraint) graph.constraints.push(constraint);
           break;
+        }
 
         case "EOF":
           return graph;
 
         default:
-          throw new ParseError(`Unexpected token at top level`, tok);
+          this.errors.push(new ParseError(`Unexpected token at top level`, tok));
+          this.syncToTopLevel();
       }
     }
 
@@ -150,10 +187,11 @@ export class Parser {
     this.consume("RBrace");
 
     if (!body.nodeType) {
-      throw new ParseError(
+      this.errors.push(new ParseError(
         `Node '${nameTok.lexeme}' is missing required 'type:' field`,
         nameTok
-      );
+      ));
+      body.nodeType = "UNKNOWN";
     }
 
     return {
@@ -220,10 +258,11 @@ export class Parser {
           break;
         }
         default:
-          throw new ParseError(
+          this.errors.push(new ParseError(
             `Unexpected token inside node body`,
             kw
-          );
+          ));
+          this.syncToNodeBodyBoundary();
       }
     }
 
@@ -270,7 +309,8 @@ export class Parser {
           break;
         }
         default:
-          throw new ParseError(`Unexpected token inside reservoir body`, kw);
+          this.errors.push(new ParseError(`Unexpected token inside reservoir body`, kw));
+          this.syncToNodeBodyBoundary();
       }
     }
 
@@ -292,51 +332,57 @@ export class Parser {
   // Downstream:  Dest [.accessor] <~ Source [.accessor] ;
   // Upstream:    Source [.cry]    ~> Dest   ;
 
-  private parseFlowStatement(): AstFlow {
+  private parseFlowStatement(): AstFlow | null {
     const startTok = this.peek();
 
-    // First identifier (LHS for <~, source for ~>)
-    const lhsName = this.consume("Identifier").lexeme;
-    const lhsPort = this.consumeAccessor();
+    try {
+      // First identifier (LHS for <~, source for ~>)
+      const lhsName = this.consume("Identifier").lexeme;
+      const lhsPort = this.consumeAccessor();
 
-    const opTok = this.peek();
+      const opTok = this.peek();
 
-    if (opTok.kind === "FlowDown") {
-      // Dest <~ Source
-      this.advance();
-      const rhsName = this.consume("Identifier").lexeme;
-      const rhsPort = this.consumeAccessor();
-      this.consume("Semicolon");
+      if (opTok.kind === "FlowDown") {
+        // Dest <~ Source
+        this.advance();
+        const rhsName = this.consume("Identifier").lexeme;
+        const rhsPort = this.consumeAccessor();
+        this.consume("Semicolon");
 
-      return {
-        kind:      "Flow",
-        direction: "DOWN",
-        from:      { node: rhsName, accessor: rhsPort },
-        to:        { node: lhsName, accessor: lhsPort },
-        span:      this.span(startTok, this.prev()),
-      };
+        return {
+          kind:      "Flow",
+          direction: "DOWN",
+          from:      { node: rhsName, accessor: rhsPort },
+          to:        { node: lhsName, accessor: lhsPort },
+          span:      this.span(startTok, this.prev()),
+        };
+      }
+
+      if (opTok.kind === "FlowUp") {
+        // Source.cry ~> Dest
+        this.advance();
+        const rhsName = this.consume("Identifier").lexeme;
+        const rhsPort = this.consumeAccessor();
+        this.consume("Semicolon");
+
+        return {
+          kind:      "Flow",
+          direction: "UP",
+          from:      { node: lhsName, accessor: lhsPort },
+          to:        { node: rhsName, accessor: rhsPort },
+          span:      this.span(startTok, this.prev()),
+        };
+      }
+
+      throw new ParseError(
+        `Expected '<~' or '~>' after identifier`,
+        opTok
+      );
+    } catch (err) {
+      if (!this.captureError(err)) throw err;
+      this.syncToSemicolon();
+      return null;
     }
-
-    if (opTok.kind === "FlowUp") {
-      // Source.cry ~> Dest
-      this.advance();
-      const rhsName = this.consume("Identifier").lexeme;
-      const rhsPort = this.consumeAccessor();
-      this.consume("Semicolon");
-
-      return {
-        kind:      "Flow",
-        direction: "UP",
-        from:      { node: lhsName, accessor: lhsPort },
-        to:        { node: rhsName, accessor: rhsPort },
-        span:      this.span(startTok, this.prev()),
-      };
-    }
-
-    throw new ParseError(
-      `Expected '<~' or '~>' after identifier`,
-      opTok
-    );
   }
 
   // Consume an optional port accessor after an identifier.
@@ -354,44 +400,90 @@ export class Parser {
 
   // ── #constraint max_dist(A [.accessor], B [.accessor]) <|<= 1.5mm; ─────
 
-  private parseConstraint(): AstConstraint {
-    const startTok = this.consume("Hash");
-    this.consume("KwConstraint");
-    this.consume("KwMaxDist");
-    this.consume("LParen");
+  private parseConstraint(): AstConstraint | null {
+    try {
+      const startTok = this.consume("Hash");
+      this.consume("KwConstraint");
+      this.consume("KwMaxDist");
+      this.consume("LParen");
 
-    const aName = this.consume("Identifier").lexeme;
-    const aPort = this.consumeAccessor();
-    this.consume("Comma");
-    const bName = this.consume("Identifier").lexeme;
-    const bPort = this.consumeAccessor();
+      const aName = this.consume("Identifier").lexeme;
+      const aPort = this.consumeAccessor();
+      this.consume("Comma");
+      const bName = this.consume("Identifier").lexeme;
+      const bPort = this.consumeAccessor();
 
-    this.consume("RParen");
-    const opTok = this.peek();
-    if (opTok.kind === "Lte" || opTok.kind === "Lt") {
-      this.advance();
-    } else {
-      throw new ParseError(`Expected '<' or '<=' in constraint`, opTok);
+      this.consume("RParen");
+      const opTok = this.peek();
+      if (opTok.kind === "Lte" || opTok.kind === "Lt") {
+        this.advance();
+      } else {
+        throw new ParseError(`Expected '<' or '<=' in constraint`, opTok);
+      }
+
+      const distTok = this.consume("FloatMm");
+      const { value, unit } = this.parseFloatMm(distTok.lexeme, distTok);
+
+      this.consumeOptional("Semicolon");
+
+      return {
+        kind:  "Constraint",
+        fn:    "max_dist",
+        portA: { node: aName, accessor: aPort },
+        portB: { node: bName, accessor: bPort },
+        op:    opTok.kind === "Lte" ? "<=" : "<",
+        value,
+        unit,
+        span:  this.span(startTok, this.prev()),
+      };
+    } catch (err) {
+      if (!this.captureError(err)) throw err;
+      this.syncToSemicolon();
+      return null;
     }
-
-    const distTok = this.consume("FloatMm");
-    const { value, unit } = this.parseFloatMm(distTok.lexeme, distTok);
-
-    this.consumeOptional("Semicolon");
-
-    return {
-      kind:  "Constraint",
-      fn:    "max_dist",
-      portA: { node: aName, accessor: aPort },
-      portB: { node: bName, accessor: bPort },
-      op:    opTok.kind === "Lte" ? "<=" : "<",
-      value,
-      unit,
-      span:  this.span(startTok, this.prev()),
-    };
   }
 
   // ── Parsing helpers ──────────────────────────────────────────────────────
+
+  private captureError(err: unknown): boolean {
+    if (err instanceof ParseError) {
+      this.errors.push(err);
+      return true;
+    }
+    return false;
+  }
+
+  private syncToSemicolon(): void {
+    while (!this.atEnd() && this.peek().kind !== "Semicolon") {
+      this.advance();
+    }
+    this.consumeOptional("Semicolon");
+  }
+
+  private syncToNodeBodyBoundary(): void {
+    while (!this.atEnd() && this.peek().kind !== "Semicolon" && this.peek().kind !== "RBrace") {
+      this.advance();
+    }
+    this.consumeOptional("Semicolon");
+  }
+
+  private isTopLevelStart(tok: Token): boolean {
+    return (
+      tok.kind === "DotEpoch" ||
+      tok.kind === "DotSector" ||
+      tok.kind === "DotNode" ||
+      tok.kind === "Reservoir" ||
+      tok.kind === "Hash" ||
+      tok.kind === "Identifier" ||
+      tok.kind === "EOF"
+    );
+  }
+
+  private syncToTopLevel(): void {
+    while (!this.atEnd() && !this.isTopLevelStart(this.peek())) {
+      this.advance();
+    }
+  }
 
   private parseHex(lexeme: string, tok: Token): number {
     const n = parseInt(lexeme, 16);
@@ -473,6 +565,8 @@ export class Parser {
 // Convenience export — matches scaffold usage: parseTokens(tokens)
 // ---------------------------------------------------------------------------
 
-export function parseTokens(tokens: Token[]): ChannelGraphAst {
-  return new Parser(tokens).parse();
+export function parseTokens(tokens: Token[]): ParseResult {
+  const parser = new Parser(tokens);
+  const ast = parser.parse();
+  return { ast, errors: parser.errors };
 }

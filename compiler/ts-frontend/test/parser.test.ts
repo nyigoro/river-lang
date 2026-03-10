@@ -2,7 +2,7 @@
 // compiler/ts-frontend/test/parser.test.ts
 
 import { tokenize } from "../src/lexer/lexer.js";
-import { parseTokens, ParseError } from "../src/parser/parser.js";
+import { parseTokens, ParseError, ParseResult } from "../src/parser/parser.js";
 import {
   ChannelGraphAst,
   AstSector,
@@ -18,8 +18,12 @@ import { describe, it } from "node:test";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parse(source: string): ChannelGraphAst {
+function parseResult(source: string): ParseResult {
   return parseTokens(tokenize(source));
+}
+
+function parse(source: string): ChannelGraphAst {
+  return parseResult(source).ast;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,11 +41,9 @@ describe("Epoch", () => {
     assert.equal(g.epoch, 0);
   });
 
-  it("throws ParseError when .epoch is not hex", () => {
-    assert.throws(
-      () => parse(".epoch fib_epoch"),
-      (err) => err instanceof ParseError
-    );
+  it("records ParseError when .epoch is not hex", () => {
+    const result = parseResult(".epoch fib_epoch");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 });
 
@@ -117,25 +119,19 @@ describe("Nodes", () => {
     assert.equal(g.nodes[4]!.name, "Exit_Gate");
   });
 
-  it("throws ParseError when type: is missing", () => {
-    assert.throws(
-      () => parse(".node Bad @ 0x001 { tag: COLOR_AUTO; }"),
-      (err) => err instanceof ParseError
-    );
+  it("records ParseError when type: is missing", () => {
+    const result = parseResult(".node Bad @ 0x001 { tag: COLOR_AUTO; }");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 
-  it("throws ParseError on unknown body keyword", () => {
-    assert.throws(
-      () => parse(".node Bad @ 0x001 { unknown: FOO; }"),
-      (err) => err instanceof ParseError
-    );
+  it("records ParseError on unknown body keyword", () => {
+    const result = parseResult(".node Bad @ 0x001 { unknown: FOO; }");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 
-  it("throws ParseError when closing brace is missing", () => {
-    assert.throws(
-      () => parse(".node Bad @ 0x001 { type: ALU_ADD; "),
-      (err) => err instanceof ParseError
-    );
+  it("records ParseError when closing brace is missing", () => {
+    const result = parseResult(".node Bad @ 0x001 { type: ALU_ADD; ");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 });
 
@@ -161,14 +157,12 @@ describe("Reservoir", () => {
     assert.equal(r.onDry, "self.purge()");
   });
 
-  it("throws ParseError on duplicate reservoir", () => {
-    assert.throws(
-      () => parse(`
+  it("records ParseError on duplicate reservoir", () => {
+    const result = parseResult(`
         @reservoir A @ 0x100 { arity: 1; handshake: PATH_HASH; on_dry: self.purge(); }
         @reservoir B @ 0x200 { arity: 1; handshake: PATH_HASH; on_dry: self.purge(); }
-      `),
-      (err) => err instanceof ParseError
-    );
+      `);
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 });
 
@@ -262,20 +256,14 @@ describe("Upstream nerves (~>)", () => {
 // ---------------------------------------------------------------------------
 
 describe("Error recovery", () => {
-  it("two consecutive .node declarations with no body throw", () => {
-    assert.throws(
-      () => parse(".node A @ 0x001 { .node B @ 0x002 { type: ALU_ADD; } }"),
-      (err) =>
-        err instanceof ParseError &&
-        err.message.toLowerCase().includes("node body")
-    );
+  it("two consecutive .node declarations with no body record a ParseError", () => {
+    const result = parseResult(".node A @ 0x001 { .node B @ 0x002 { type: ALU_ADD; } }");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 
-  it("missing semicolon on flow throws ParseError", () => {
-    assert.throws(
-      () => parse("A <~ B"),
-      (err) => err instanceof ParseError
-    );
+  it("missing semicolon on flow records a ParseError", () => {
+    const result = parseResult("A <~ B");
+    assert.ok(result.errors.some(err => err instanceof ParseError));
   });
 });
 
@@ -379,8 +367,9 @@ Feedback_Merge.cry  ~> Seed_Gen;
 #constraint max_dist(Feedback_Merge.cry, Seed_Gen)        < 1.5mm;
 `.trim();
 
-  it("parses without throwing", () => {
-    assert.doesNotThrow(() => parse(FIBONACCI));
+  it("parses without errors", () => {
+    const result = parseResult(FIBONACCI);
+    assert.equal(result.errors.length, 0);
   });
 
   it("epoch = 0x52495645", () => {

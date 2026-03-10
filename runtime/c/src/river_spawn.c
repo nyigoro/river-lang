@@ -17,6 +17,10 @@
 river_status_t river_spawn(river_t r, token_t input) {
     if (!r)              return RIVER_ERR_NULL_HANDLE;
     if (r->enclave.wiped) return RIVER_ERR_FATAL;
+    if (!r->epoch_validated) {
+        river_set_error(r, "Manifest epoch not validated");
+        return RIVER_ERR_STALE_MANIFEST;
+    }
 
     /* ── Simulation path ──────────────────────────────────────────────────── */
     if (r->sim_mode) {
@@ -32,10 +36,11 @@ river_status_t river_spawn(river_t r, token_t input) {
          * Step 1 — Prime Session_Salt
          *   Generate a 32-bit session salt from the epoch and node addresses.
          *   Hardware: loaded from the BLAKE3-Lite Enclave primitive register.
-         *   Simulation: derived from the manifest epoch XOR a counter.
+         *   Simulation: derived from the hardware epoch with a deterministic mix.
          */
         if (r->enclave.session_salt == 0) {
-            r->enclave.session_salt = r->header.epoch_id ^ 0xDEADC0DEu;
+            uint32_t epoch = river_get_epoch();
+            r->enclave.session_salt = river_salt_rotate(RIVER_SALT_SEED, epoch);
         }
 
         /*

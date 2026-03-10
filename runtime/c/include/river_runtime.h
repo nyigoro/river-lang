@@ -24,6 +24,8 @@ extern "C" {
 
 #define RVR_MAGIC            0x52495645u   /* "RIVE" little-endian */
 #define RVR_HEADER_SIZE      24u           /* bytes */
+#define RIVER_EPOCH_BASE     0x52495645u   /* default simulation epoch */
+#define RIVER_SALT_SEED      0xC0FFEE01u   /* simulation seed for Session_Salt */
 
 /* ── Opcodes ───────────────────────────────────────────────────────────────── */
 
@@ -129,6 +131,7 @@ struct river_state_s {
 
     /* Security */
     enclave_t          enclave;
+    uint8_t            epoch_validated;
     tag_palette_t      tag_palette;
     quarantine_table_t quarantine;
 
@@ -178,6 +181,8 @@ uint16_t       tag_palette_alloc(tag_palette_t *p);
 void           tag_palette_free(tag_palette_t *p, uint16_t tag);
 uint32_t       river_now_ms(void);
 uint64_t       river_now_ns(void);
+uint32_t       river_epoch_advance(void);
+uint32_t       river_salt_rotate(uint32_t current_salt, uint32_t epoch);
 
 /* ── Simulation entry points (river-sim Rust crate via stub or FFI) ────────── */
 

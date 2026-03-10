@@ -25,6 +25,7 @@ import {
   TextDocumentSyncKind,
   Diagnostic,
   DiagnosticSeverity,
+  DiagnosticRelatedInformation,
   Hover,
   Location,
   CompletionItem,
@@ -105,13 +106,27 @@ function publishDiagnostics(doc: TextDocument): DocState {
   const state = analyseDocument(doc);
   cache.set(doc.uri, state);
 
-  const lspDiags: Diagnostic[] = state.diags.map(d => ({
-    severity: lspSeverity(d.severity),
-    range:    spanToRange(d.span),
-    message:  d.hint ? `${d.message}\n\n${d.hint}` : d.message,
-    source:   'river-lang',
-    code:     d.rule,
-  }));
+  const lspDiags: Diagnostic[] = state.diags.map(d => {
+    const diag: Diagnostic = {
+      severity: lspSeverity(d.severity),
+      range:    spanToRange(d.span),
+      message:  d.hint ? `${d.message}\n\n${d.hint}` : d.message,
+      source:   'river-lang',
+      code:     d.rule,
+    };
+
+    if (d.related && d.related.length > 0) {
+      diag.relatedInformation = d.related.map<DiagnosticRelatedInformation>(r => ({
+        message: r.message,
+        location: {
+          uri: doc.uri,
+          range: spanToRange(r.span),
+        },
+      }));
+    }
+
+    return diag;
+  });
 
   connection.sendDiagnostics({ uri: doc.uri, diagnostics: lspDiags });
   return state;

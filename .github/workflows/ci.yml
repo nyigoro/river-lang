@@ -140,6 +140,42 @@ jobs:
       - name: Run syntax tests
         run: npm test
 
+  vscode-extension:
+    name: "VSCode · package"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tooling/syntax/vscode-extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: |
+            tooling/lsp/package-lock.json
+            tooling/syntax/vscode-extension/package-lock.json
+
+      - name: Install LSP dependencies
+        run: npm ci --prefix ../../lsp
+
+      - name: Install extension dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Package VS Code extension
+        run: npx @vscode/vsce package --no-dependencies
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: river-lang-vsix
+          path: tooling/syntax/vscode-extension/*.vsix
+
   hdl-drc:
     name: "HDL · DRC CTest (linux)"
     runs-on: ubuntu-latest

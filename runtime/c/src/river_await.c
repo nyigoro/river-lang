@@ -52,7 +52,7 @@ river_result_t river_await(river_t r, uint64_t timeout_ns) {
         /* Retrieve the result computed by river_spawn → sim_run */
         result.value  = token_int(r->sim_result);
         result.status = r->last_status;
-        result.epoch  = r->header.epoch_id;
+        result.epoch  = river_get_epoch();
 
         if (result.status != RIVER_OK) {
             result.cry_code  = r->cry_code;

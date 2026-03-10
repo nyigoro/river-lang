@@ -31,13 +31,19 @@ export function analyse(ast: ChannelGraphAst): AnalysisResult {
 
   // Nodes
   const nodeAddrs = new Map<number, string>(); // address → first node name
+  const nodeAddrSpans = new Map<number, Span>(); // address → first span
   for (const node of ast.nodes) {
     if (symbols.has(node.name)) {
+      const first = symbols.get(node.name);
       diags.push({
         severity: 'error', rule: 'R2',
         message:  `Duplicate node name '${node.name}'`,
         hint:     'Each node name must be unique within the channel graph',
         span:     node.span,
+        related:  first ? [{
+          message: `First declaration of '${node.name}'`,
+          span: first.span,
+        }] : undefined,
       });
     } else {
       symbols.set(node.name, {
@@ -49,14 +55,21 @@ export function analyse(ast: ChannelGraphAst): AnalysisResult {
 
     // R3 — duplicate address
     if (nodeAddrs.has(node.address)) {
+      const firstName = nodeAddrs.get(node.address);
+      const firstSpan = nodeAddrSpans.get(node.address);
       diags.push({
         severity: 'error', rule: 'R3',
         message:  `Duplicate physical address 0x${node.address.toString(16).toUpperCase().padStart(4, '0')} — also used by '${nodeAddrs.get(node.address)}'`,
         hint:     'Each node must have a unique physical address on chip',
         span:     node.span,
+        related:  firstSpan ? [{
+          message: `First declared here (${firstName})`,
+          span: firstSpan,
+        }] : undefined,
       });
     } else {
       nodeAddrs.set(node.address, node.name);
+      nodeAddrSpans.set(node.address, node.span);
     }
   }
 
@@ -73,11 +86,16 @@ export function analyse(ast: ChannelGraphAst): AnalysisResult {
   if (ast.reservoir) {
     const res = ast.reservoir;
     if (symbols.has(res.name)) {
+      const first = symbols.get(res.name);
       diags.push({
         severity: 'error', rule: 'R2',
         message:  `'${res.name}' is already declared as a node`,
         hint:     'Reservoir name must not clash with any node name',
         span:     res.span,
+        related:  first ? [{
+          message: `First declaration of '${res.name}'`,
+          span: first.span,
+        }] : undefined,
       });
     } else {
       symbols.set(res.name, {
@@ -86,10 +104,16 @@ export function analyse(ast: ChannelGraphAst): AnalysisResult {
         detail:  `reservoir @ 0x${res.address.toString(16).toUpperCase().padStart(4, '0')} arity:${res.arity}`,
       });
       if (nodeAddrs.has(res.address)) {
+        const firstName = nodeAddrs.get(res.address);
+        const firstSpan = nodeAddrSpans.get(res.address);
         diags.push({
           severity: 'error', rule: 'R3',
           message:  `Reservoir address 0x${res.address.toString(16).toUpperCase()} conflicts with node '${nodeAddrs.get(res.address)}'`,
           span:     res.span,
+          related:  firstSpan ? [{
+            message: `First declared here (${firstName})`,
+            span: firstSpan,
+          }] : undefined,
         });
       }
     }

@@ -20,6 +20,7 @@ import {
   ChannelGraphAst,
   PortRef,
 } from "../parser/ast.js";
+import { ParseError } from "../parser/parser.js";
 
 // ---------------------------------------------------------------------------
 // Diagnostic — a typed error with location hint
@@ -375,6 +376,36 @@ export class TypeChecker {
 // Convenience export — matches scaffold usage: typeCheck(ast)
 // ---------------------------------------------------------------------------
 
-export function typeCheck(ast: ChannelGraphAst): TypeCheckResult {
-  return new TypeChecker().check(ast);
+export function typeCheck(
+  ast: ChannelGraphAst,
+  parseErrors: ParseError[] = [],
+): TypeCheckResult {
+  return typeCheckWithParseErrors(ast, parseErrors);
+}
+
+export function typeCheckWithParseErrors(
+  ast: ChannelGraphAst,
+  parseErrors: ParseError[],
+): TypeCheckResult {
+  const base = new TypeChecker().check(ast);
+  if (parseErrors.length === 0) {
+    return base;
+  }
+
+  const parseDiags: Diagnostic[] = parseErrors.map(err => ({
+    severity: "error",
+    rule: "PARSE",
+    message: err.message,
+  }));
+
+  const errors = [...parseDiags, ...base.errors];
+  const warnings = [...base.warnings];
+  const diagnostics = [...errors, ...warnings];
+
+  return {
+    ok: false,
+    diagnostics,
+    errors,
+    warnings,
+  };
 }

@@ -70,8 +70,8 @@ typedef struct {
 
 /**
  * Load a .rvr manifest from disk.
- * Validates magic bytes, manifest_length, structural integrity.
- * Returns an allocated river_t, or NULL on failure.
+ * Validates magic bytes, manifest_length, structural integrity, and epoch.
+ * Returns an allocated river_t, or NULL on failure or stale epoch.
  */
 river_t river_load(const char *rvr_path);
 

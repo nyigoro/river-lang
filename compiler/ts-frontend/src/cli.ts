@@ -10,12 +10,12 @@ function main(): void {
 
   const source = readFileSync(inputPath, "utf8");
   const tokens = tokenize(source);
-  const ast = parseTokens(tokens);
-  const result = typeCheck(ast);
+  const { ast, errors } = parseTokens(tokens);
+  const result = typeCheck(ast, errors);
 
   if (!result.ok) {
     for (const diag of result.diagnostics) {
-      console.error(`[typecheck] ${diag}`);
+      console.error(`[typecheck] ${diag.message}`);
     }
     process.exit(2);
   }

@@ -8,11 +8,13 @@ pub mod manifest;
 pub mod path_auditor;
 pub mod spatial_mapper;
 pub mod bridge;
+pub mod epoch_chain;
 
 use anyhow::{anyhow, bail, Context, Result};
 
 use emitter::emit_with_sector_map;
 use crate::bridge::ffi;
+use crate::epoch_chain::{epoch_chain_valid, EpochState};
 use manifest::{
     Instruction, RvrManifest, LINK_FLAG_FALSE_BRANCH, LINK_FLAG_TRUE_BRANCH, LINK_FLAG_UPSTREAM,
     LINK_NODE_MASK, RES_FLAG_HASH_CHECK, RES_FLAG_PURGE_ON_DRY,
@@ -166,7 +168,20 @@ fn sector_map_mask(sector_count: usize) -> Result<u64> {
 }
 
 pub fn compile_manifest(ast_json: &str) -> Result<RvrManifest> {
+    compile_manifest_with_epoch_state(ast_json, None)
+}
+
+pub fn compile_manifest_with_epoch_state(
+    ast_json: &str,
+    epoch_state: Option<&EpochState>,
+) -> Result<RvrManifest> {
     let graph = deserialize_graph(ast_json)?;
+
+    if let Some(state) = epoch_state {
+        if !epoch_chain_valid(graph.epoch, state.epoch, state.salt) {
+            bail!("RIVER_ERR_STALE_MANIFEST");
+        }
+    }
 
     let mut manifest = RvrManifest::new();
     manifest

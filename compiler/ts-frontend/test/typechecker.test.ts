@@ -13,7 +13,8 @@ import { describe, it } from "node:test";
 // ---------------------------------------------------------------------------
 
 function check(source: string): TypeCheckResult {
-  return typeCheck(parseTokens(tokenize(source)));
+  const { ast, errors } = parseTokens(tokenize(source));
+  return typeCheck(ast, errors);
 }
 
 function checkAst(ast: ChannelGraphAst): TypeCheckResult {
