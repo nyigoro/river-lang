@@ -49,12 +49,11 @@ pub fn compute_salted_hash(epoch: u32, address: u32, hop: u16) -> u32 {
         digest.as_bytes()[2],
         digest.as_bytes()[3],
     ]);
+    finalize_hash(hash)
+}
 
-    if hash == 0 {
-        1
-    } else {
-        hash
-    }
+fn finalize_hash(hash: u32) -> u32 {
+    if hash == 0 { 1 } else { hash }
 }
 
 pub fn build_spatial_map(nodes: &[(String, u32)], epoch: u32) -> SpatialMap {
@@ -98,6 +97,7 @@ pub fn to_map_node_instructions(map: &SpatialMap) -> Vec<Instruction> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn hash_is_deterministic() {
@@ -131,5 +131,27 @@ mod tests {
         assert_eq!(map.entries[2].node_id, 2);
         assert_eq!(map.id_of("B"), Some(1));
         assert!(map.hash_of("A").is_some());
+    }
+
+    #[test]
+    fn zero_hash_guard() {
+        assert_eq!(finalize_hash(0), 1);
+    }
+
+    #[test]
+    fn node_hashes_are_unique_for_999_nodes() {
+        let mut set = HashSet::with_capacity(999);
+        for i in 0..999u32 {
+            let hash = compute_salted_hash(0x5249_5645, 0x1000 + i, i as u16);
+            set.insert(hash);
+        }
+        assert_eq!(set.len(), 999);
+    }
+
+    #[test]
+    fn different_epochs_produce_different_hashes() {
+        let a = compute_salted_hash(0x5249_5645, 0x00A0, 0);
+        let b = compute_salted_hash(0x5249_5646, 0x00A0, 0);
+        assert_ne!(a, b);
     }
 }

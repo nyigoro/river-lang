@@ -135,11 +135,7 @@ impl NodeWire {
     pub fn route(&mut self, token: Token) -> RouteDecision {
         // Stage 1: DIR_BIT split + CRC check
         if !token.crc_valid() {
-            let cry = Token::new_upstream(self.expected_hash, token.tag_gen, ThirstCode::CrcFail as u8);
-            return RouteDecision::EvaporateAndCry {
-                cry,
-                reason: ThirstCode::CrcFail,
-            };
+            return RouteDecision::Evaporate { reason: "crc_fail" };
         }
 
         if token.is_upstream() {
@@ -195,17 +191,11 @@ mod tests {
     }
 
     #[test]
-    fn crc_fail_generates_cry() {
+    fn crc_fail_evaporates_silently() {
         let mut w = wire();
         let mut token = Token::new_downstream(0xDEAD_1234, 1, 99);
         token.crc ^= 0x1;
-        assert!(matches!(
-            w.route(token),
-            RouteDecision::EvaporateAndCry {
-                reason: ThirstCode::CrcFail,
-                ..
-            }
-        ));
+        assert!(matches!(w.route(token), RouteDecision::Evaporate { .. }));
     }
 
     #[test]

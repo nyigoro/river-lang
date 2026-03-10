@@ -73,16 +73,19 @@ export class TypeChecker {
     this.checkDuplicateNames(ast);                 // R2
     this.checkDuplicateAddresses(ast);             // R3
     this.checkSectorCoverage(ast);                 // R6
+    this.checkReservoirPresence(ast);             // R4
     this.checkFlowReferences(ast.flows, ast);      // R1, R4
     this.checkNerveReferences(ast.nerves);         // R1, R5
     this.checkConstraintReferences(ast.constraints); // R7
+    this.checkSwitchGateCoverage(ast);            // R8
 
     const errors   = this.diagnostics.filter(d => d.severity === "error");
     const warnings = this.diagnostics.filter(d => d.severity === "warning");
+    const orderedDiagnostics = [...errors, ...warnings];
 
     return {
       ok:          errors.length === 0,
-      diagnostics: this.diagnostics,
+      diagnostics: orderedDiagnostics,
       errors,
       warnings,
     };
@@ -237,6 +240,18 @@ export class TypeChecker {
     }
   }
 
+  // ── R4: @reservoir must exist when any flow is present ───────────────────
+
+  private checkReservoirPresence(ast: ChannelGraphAst): void {
+    if (ast.flows.length > 0 && !ast.reservoir) {
+      this.error(
+        "R4",
+        "Missing @reservoir declaration.",
+        "Define a reservoir with '@reservoir Name @ 0xADDR { ... }' before using flows."
+      );
+    }
+  }
+
   // ── R5: Nerve connections must originate from .cry port ──────────────────
 
   private checkNerveReferences(nerves: AstFlow[]): void {
@@ -291,6 +306,38 @@ export class TypeChecker {
           `exceeds the 2.0mm architectural Nerve distance limit.`,
           `The hardware DRC enforces a 2.0mm maximum on all Nerve (Layer 3) paths. ` +
           `A constraint above 2.0mm will be rejected by the Geologist Spatial Mapper.`
+        );
+      }
+    }
+  }
+
+  // ── R8: SWITCH_GATE requires both TRUE and FALSE branches ────────────────
+
+  private checkSwitchGateCoverage(ast: ChannelGraphAst): void {
+    const gates = ast.nodes.filter(n => n.nodeType === "SWITCH_GATE");
+    if (gates.length === 0) return;
+
+    for (const gate of gates) {
+      const hasTrue = ast.flows.some(
+        f => f.from.node === gate.name && f.from.accessor === "TRUE"
+      );
+      const hasFalse = ast.flows.some(
+        f => f.from.node === gate.name && f.from.accessor === "FALSE"
+      );
+
+      if (!hasTrue) {
+        this.warn(
+          "R8",
+          `SWITCH_GATE '${gate.name}' has no .TRUE branch flow.`,
+          `Add a downstream flow like 'Dest <~ ${gate.name}.TRUE;'.`
+        );
+      }
+
+      if (!hasFalse) {
+        this.warn(
+          "R8",
+          `SWITCH_GATE '${gate.name}' has no .FALSE branch flow.`,
+          `Add a downstream flow like 'Dest <~ ${gate.name}.FALSE;'.`
         );
       }
     }

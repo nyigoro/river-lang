@@ -191,6 +191,39 @@ TEST(get_epoch_advances) {
     CHECK(e2 >= e1);
 }
 
+TEST(river_await_timeout) {
+    uint8_t buf[512];
+    size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
+    const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    if (!r) { printf("SKIP\n"); return; }
+
+    river_spawn(r, token_int(10));
+    river_result_t res = river_await(r, 1);
+    CHECK_EQ(res.status, RIVER_ERR_TIMEOUT);
+    river_enclave_wipe(r);
+}
+
+TEST(river_await_zero_timeout) {
+    uint8_t buf[512];
+    size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
+    const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    if (!r) { printf("SKIP\n"); return; }
+
+    r->last_status = RIVER_ERR_THIRST;
+    r->cry_code = THIRST_DRY_INPUT;
+    river_result_t res = river_await(r, 0);
+    CHECK_EQ(res.status, RIVER_ERR_THIRST);
+    river_enclave_wipe(r);
+}
+
 TEST(river_load_null_path) {
     river_t r = river_load(NULL);
     CHECK(r == NULL);
@@ -235,6 +268,30 @@ TEST(river_load_truncated_manifest) {
     uint32_t fake_len = *(uint32_t *)(buf + 20) + 10;
     memcpy(buf + 20, &fake_len, 4);
     const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    CHECK(r == NULL);
+}
+
+TEST(river_load_wrong_epoch) {
+    uint8_t buf[512];
+    size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
+    uint32_t wrong_epoch = 0xDEAD_BEEFu;
+    memcpy(buf + 4, &wrong_epoch, 4);
+    const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    CHECK(r == NULL);
+}
+
+TEST(river_load_truncated_header) {
+    uint8_t buf[12];
+    memset(buf, 0, sizeof(buf));
+    const char *path = write_temp_rvr(buf, sizeof(buf));
     if (!path) { printf("SKIP\n"); return; }
 
     river_t r = river_load(path);
@@ -377,6 +434,40 @@ TEST(purge_resets_status) {
     river_enclave_wipe(r);
 }
 
+TEST(respawn_after_chronic) {
+    uint8_t buf[512];
+    size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
+    const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    if (!r) { printf("SKIP\n"); return; }
+
+    if (r->sector_count > 0) {
+        r->sectors[0].cluster_mask = 0;
+    }
+
+    river_status_t st = river_respawn(r, token_int(10), 1);
+    CHECK_NE(st, RIVER_OK);
+    river_enclave_wipe(r);
+}
+
+TEST(respawn_zero_attempts) {
+    uint8_t buf[512];
+    size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
+    const char *path = write_temp_rvr(buf, len);
+    if (!path) { printf("SKIP\n"); return; }
+
+    river_t r = river_load(path);
+    remove(path);
+    if (!r) { printf("SKIP\n"); return; }
+
+    river_status_t st = river_respawn(r, token_int(5), 0);
+    CHECK_EQ(st, RIVER_OK);
+    river_enclave_wipe(r);
+}
+
 TEST(wipe_returns_confirmed) {
     uint8_t buf[512];
     size_t  len = build_minimal_rvr(buf, sizeof(buf), 0x52495645u, 0x00A0u);
@@ -391,6 +482,19 @@ TEST(wipe_returns_confirmed) {
     CHECK_EQ(ws, WIPE_CONFIRMED);
 }
 
+TEST(secure_zero_large_buffer) {
+    uint8_t *buf = (uint8_t *)malloc(4096);
+    if (!buf) { printf("SKIP\n"); return; }
+    memset(buf, 0xAB, 4096);
+    river_secure_zero(buf, 4096);
+    int all_zero = 1;
+    for (size_t i = 0; i < 4096; i++) {
+        if (buf[i] != 0) { all_zero = 0; break; }
+    }
+    CHECK(all_zero);
+    free(buf);
+}
+
 /* ── main ──────────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -403,11 +507,15 @@ int main(void) {
     RUN(secure_zero_clears_memory);
     RUN(get_epoch_nonzero);
     RUN(get_epoch_advances);
+    RUN(river_await_timeout);
+    RUN(river_await_zero_timeout);
     RUN(river_load_null_path);
     RUN(river_load_nonexistent_path);
     RUN(river_load_valid_manifest);
     RUN(river_load_wrong_magic);
     RUN(river_load_truncated_manifest);
+    RUN(river_load_wrong_epoch);
+    RUN(river_load_truncated_header);
     RUN(spawn_and_await_fibonacci_10);
     RUN(spawn_fibonacci_0);
     RUN(spawn_fibonacci_1);
@@ -418,7 +526,10 @@ int main(void) {
     RUN(quarantine_cluster_does_not_crash);
     RUN(identify_node_on_wiped_handle_returns_neg1);
     RUN(purge_resets_status);
+    RUN(respawn_after_chronic);
+    RUN(respawn_zero_attempts);
     RUN(wipe_returns_confirmed);
+    RUN(secure_zero_large_buffer);
 
     printf("══════════════════════════════════════════════════════════════\n");
     printf("  %d passed, %d failed\n\n", g_pass, g_fail);

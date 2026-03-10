@@ -3,6 +3,8 @@
 use anyhow::{anyhow, Result};
 
 use crate::router::{NodeWire, RouteDecision, ThirstCode, Token};
+use crate::dll_model::calibrate;
+use crate::ppm::PHI_SKEW_LIMIT_PS;
 use crate::spatial_mapper_sim::SimSpatialMap;
 
 #[derive(Debug, Clone)]
@@ -162,6 +164,97 @@ pub fn verify_purge_and_recovery() -> bool {
     )
 }
 
+pub fn verify_crc_fail_evaporates_silently() -> bool {
+    let mut wire = NodeWire::new(0x00A0, 0xDEAD_1234);
+    let mut token = Token::new_downstream(0xDEAD_1234, 1, 99);
+    token.crc ^= 0x1;
+    matches!(wire.route(token), RouteDecision::Evaporate { .. })
+}
+
+pub fn verify_hash_mism_emits_cry() -> bool {
+    let mut wire = NodeWire::new(0x00A0, 0xDEAD_1234);
+    let token = Token::new_downstream(0xBADB_ADBA, 1, 42);
+    match wire.route(token) {
+        RouteDecision::EvaporateAndCry { cry, reason } => {
+            reason == ThirstCode::HashMism && cry.payload == ThirstCode::HashMism as u64
+        }
+        _ => false,
+    }
+}
+
+pub fn verify_purge_recycles_tag_gen() -> bool {
+    let mut wire = NodeWire::new(0x00A0, 0xDEAD_1234);
+    let first = Token::new_downstream(0xDEAD_1234, 1, 10);
+    let purge = Token::new_downstream(0xDEAD_1234, 0xFFFF, 0);
+    let second = Token::new_downstream(0xDEAD_1234, 1, 11);
+
+    matches!(wire.route(first), RouteDecision::AcceptToAlu(_))
+        && matches!(wire.route(purge), RouteDecision::EvaporateAndCry { reason: ThirstCode::PurgeAll, .. })
+        && matches!(wire.route(second), RouteDecision::AcceptToAlu(_))
+}
+
+pub fn verify_dll_warmup_required_before_ppm() -> bool {
+    let unlocked = calibrate(PHI_SKEW_LIMIT_PS);
+    let locked = calibrate(0);
+    !unlocked.locked && locked.locked
+}
+
+pub fn simulate_linear_path() -> Option<u64> {
+    const EPOCH: u32 = 0x5249_5645;
+    const TAG: u16 = 0x0001;
+
+    let nodes: Vec<(String, u32)> = vec![
+        ("Token_Gen".to_string(), 0x0010),
+        ("Alu_Add".to_string(), 0x0020),
+        ("Alu_Sub".to_string(), 0x0030),
+        ("Reservoir".to_string(), 0x0040),
+    ];
+
+    let spatial = SimSpatialMap::build(&nodes, EPOCH);
+    let mut wires: Vec<NodeWire> = nodes
+        .iter()
+        .map(|(name, address)| {
+            let hash = spatial
+                .hash_of(name)
+                .expect("spatial map hash missing for node");
+            NodeWire::new(*address, hash)
+        })
+        .collect();
+
+    let index_of = |name: &str| -> usize {
+        nodes
+            .iter()
+            .position(|(node_name, _)| node_name == name)
+            .expect("node missing")
+    };
+
+    let mut value = 5_u64;
+
+    let token = Token::new_downstream(spatial.hash_of("Token_Gen").unwrap(), TAG, value);
+    if !matches!(wires[index_of("Token_Gen")].route(token), RouteDecision::AcceptToAlu(_)) {
+        return None;
+    }
+
+    value += 3;
+    let token = Token::new_downstream(spatial.hash_of("Alu_Add").unwrap(), TAG, value);
+    if !matches!(wires[index_of("Alu_Add")].route(token), RouteDecision::AcceptToAlu(_)) {
+        return None;
+    }
+
+    value -= 2;
+    let token = Token::new_downstream(spatial.hash_of("Alu_Sub").unwrap(), TAG, value);
+    if !matches!(wires[index_of("Alu_Sub")].route(token), RouteDecision::AcceptToAlu(_)) {
+        return None;
+    }
+
+    let token = Token::new_downstream(spatial.hash_of("Reservoir").unwrap(), TAG, value);
+    if !matches!(wires[index_of("Reservoir")].route(token), RouteDecision::AcceptToAlu(_)) {
+        return None;
+    }
+
+    Some(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,5 +284,31 @@ mod tests {
     #[test]
     fn purge_allows_new_tag() {
         assert!(verify_purge_and_recovery());
+    }
+
+    #[test]
+    fn crc_fail_evaporates_silently() {
+        assert!(verify_crc_fail_evaporates_silently());
+    }
+
+    #[test]
+    fn hash_mismatch_emits_expected_cry_code() {
+        assert!(verify_hash_mism_emits_cry());
+    }
+
+    #[test]
+    fn purge_recycles_tag_gen() {
+        assert!(verify_purge_recycles_tag_gen());
+    }
+
+    #[test]
+    fn dll_warm_up_required_before_ppm() {
+        assert!(verify_dll_warmup_required_before_ppm());
+    }
+
+    #[test]
+    fn multi_node_linear_path() {
+        let value = simulate_linear_path().expect("linear path failed");
+        assert_eq!(value, 6);
     }
 }

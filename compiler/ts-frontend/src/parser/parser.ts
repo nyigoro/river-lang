@@ -306,7 +306,7 @@ export class Parser {
       this.advance();
       const rhsName = this.consume("Identifier").lexeme;
       const rhsPort = this.consumeAccessor();
-      this.consumeOptional("Semicolon");
+      this.consume("Semicolon");
 
       return {
         kind:      "Flow",
@@ -322,7 +322,7 @@ export class Parser {
       this.advance();
       const rhsName = this.consume("Identifier").lexeme;
       const rhsPort = this.consumeAccessor();
-      this.consumeOptional("Semicolon");
+      this.consume("Semicolon");
 
       return {
         kind:      "Flow",

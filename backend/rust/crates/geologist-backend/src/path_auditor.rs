@@ -213,7 +213,7 @@ pub fn audit(instructions: &[Instruction], sectors: &[SectorRange]) -> AuditResu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manifest::{Instruction, RES_FLAG_HASH_CHECK};
+    use crate::manifest::{Instruction, RES_FLAG_HASH_CHECK, LINK_FLAG_TRUE_BRANCH, LINK_FLAG_FALSE_BRANCH};
 
     fn valid() -> Vec<Instruction> {
         vec![
@@ -278,5 +278,74 @@ mod tests {
         let result = audit(&instructions, &[]);
         assert!(!result.ok);
         assert!(result.violations.iter().any(|v| v.rule == "A2"));
+    }
+
+    #[test]
+    fn a3_zero_salted_hash_fails() {
+        let mut instructions = valid();
+        instructions.push(Instruction::MapNode {
+            node_id: 2,
+            address: 0x00C8,
+            salted_hash: 0,
+        });
+        let result = audit(&instructions, &[]);
+        assert!(!result.ok);
+        assert!(result.violations.iter().any(|v| v.rule == "A3"));
+    }
+
+    #[test]
+    fn a4_missing_init_res_fails() {
+        let mut instructions = valid();
+        instructions.retain(|instr| !matches!(instr, Instruction::InitRes { .. }));
+        let result = audit(&instructions, &[]);
+        assert!(!result.ok);
+        assert!(result.violations.iter().any(|v| v.rule == "A4"));
+    }
+
+    #[test]
+    fn a5_address_outside_sector_fails() {
+        let mut instructions = valid();
+        instructions.push(Instruction::MapNode {
+            node_id: 2,
+            address: 0x0500,
+            salted_hash: 0x1234_5678,
+        });
+        let sectors = vec![SectorRange {
+            name: "Alpha".to_string(),
+            start: 0x0000,
+            end: 0x03FF,
+        }];
+        let result = audit(&instructions, &sectors);
+        assert!(!result.ok);
+        assert!(result.violations.iter().any(|v| v.rule == "A5"));
+    }
+
+    #[test]
+    fn a5_address_on_boundary_passes() {
+        let mut instructions = valid();
+        instructions.push(Instruction::MapNode {
+            node_id: 2,
+            address: 0x03FF,
+            salted_hash: 0x1234_5678,
+        });
+        let sectors = vec![SectorRange {
+            name: "Alpha".to_string(),
+            start: 0x0000,
+            end: 0x03FF,
+        }];
+        let result = audit(&instructions, &sectors);
+        assert!(result.ok);
+    }
+
+    #[test]
+    fn duplicate_branch_flags_on_dest_fails() {
+        let mut instructions = valid();
+        instructions.push(Instruction::LinkFlow {
+            src: 0x0000,
+            dest: LINK_FLAG_TRUE_BRANCH | LINK_FLAG_FALSE_BRANCH | 0x0001,
+        });
+        let result = audit(&instructions, &[]);
+        assert!(!result.ok);
+        assert!(result.violations.iter().any(|v| v.rule == "A1"));
     }
 }

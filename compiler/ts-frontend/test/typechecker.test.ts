@@ -475,6 +475,44 @@ describe("Result structure", () => {
     assert.ok(result.diagnostics.some(d => d.severity === "warning"));
   });
 
+  it("diagnostics are ordered with errors before warnings", () => {
+    const result = check(`
+      .node X @ 0x001 { type: ALU_ADD; }
+      .node X @ 0x002 { type: ALU_SUB; }
+    `);
+    assert.equal(result.diagnostics[0]!.severity, "error");
+  });
+
+  it("R1 message includes undefined node name", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Dest @ 0x001 { type: ALU_ADD; }
+      Dest <~ Ghost;
+    `);
+    assert.ok(errorMessages(result).some(m => m.includes("Undefined node 'Ghost'")));
+  });
+
+  it("R2 message includes duplicate node name", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Foo @ 0x001 { type: ALU_ADD; }
+      .node Foo @ 0x002 { type: ALU_SUB; }
+    `);
+    assert.ok(errorMessages(result).some(m => m.includes("Duplicate node name 'Foo'")));
+  });
+
+  it("R3 message includes duplicate address", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Foo @ 0x010 { type: ALU_ADD; }
+      .node Bar @ 0x010 { type: ALU_SUB; }
+    `);
+    assert.ok(errorMessages(result).some(m => m.includes("Address collision")));
+  });
+
   it("every diagnostic has a rule, message, and severity", () => {
     const result = check(`
       .sector Alpha [0x000-0x1FF]
@@ -486,5 +524,66 @@ describe("Result structure", () => {
       assert.ok(d.message,  `Diagnostic missing 'message': ${JSON.stringify(d)}`);
       assert.ok(d.severity, `Diagnostic missing 'severity': ${JSON.stringify(d)}`);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R4 — missing reservoir
+// ---------------------------------------------------------------------------
+
+describe("R4 — missing reservoir", () => {
+  it("errors when flows exist without a reservoir", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node A @ 0x001 { type: ALU_ADD; }
+      .node B @ 0x002 { type: MERGE_GATE; }
+      B <~ A;
+    `);
+    assert.ok(hasError(result, "R4"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R8 — SWITCH_GATE branch coverage
+// ---------------------------------------------------------------------------
+
+describe("R8 — SWITCH_GATE branch coverage", () => {
+  it("warns when TRUE branch is missing", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Gate @ 0x001 { type: SWITCH_GATE; }
+      .node Dest @ 0x002 { type: MERGE_GATE; }
+      @reservoir Out @ 0x0100 { arity: 1; handshake: PATH_HASH; on_dry: self.purge(); }
+      Dest <~ Gate.FALSE;
+    `);
+    assert.ok(hasWarning(result, "R8"));
+  });
+
+  it("warns when FALSE branch is missing", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Gate @ 0x001 { type: SWITCH_GATE; }
+      .node Dest @ 0x002 { type: MERGE_GATE; }
+      @reservoir Out @ 0x0100 { arity: 1; handshake: PATH_HASH; on_dry: self.purge(); }
+      Dest <~ Gate.TRUE;
+    `);
+    assert.ok(hasWarning(result, "R8"));
+  });
+
+  it("no warnings when both branches exist", () => {
+    const result = check(`
+      .epoch 0x1
+      .sector Alpha [0x000-0x1FF]
+      .node Gate @ 0x001 { type: SWITCH_GATE; }
+      .node T @ 0x002 { type: MERGE_GATE; }
+      .node F @ 0x003 { type: MERGE_GATE; }
+      @reservoir Out @ 0x0100 { arity: 1; handshake: PATH_HASH; on_dry: self.purge(); }
+      T <~ Gate.TRUE;
+      F <~ Gate.FALSE;
+    `);
+    assert.ok(!hasWarning(result, "R8"));
   });
 });

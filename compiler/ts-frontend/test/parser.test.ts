@@ -36,6 +36,13 @@ describe("Epoch", () => {
     const g = parse("");
     assert.equal(g.epoch, 0);
   });
+
+  it("throws ParseError when .epoch is not hex", () => {
+    assert.throws(
+      () => parse(".epoch fib_epoch"),
+      (err) => err instanceof ParseError
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -123,6 +130,13 @@ describe("Nodes", () => {
       (err) => err instanceof ParseError
     );
   });
+
+  it("throws ParseError when closing brace is missing", () => {
+    assert.throws(
+      () => parse(".node Bad @ 0x001 { type: ALU_ADD; "),
+      (err) => err instanceof ParseError
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -189,6 +203,10 @@ describe("Downstream flows (<~)", () => {
     assert.equal(f.from.accessor, "FALSE");
   });
 
+  it("does not throw on .out accessor at parse level", () => {
+    assert.doesNotThrow(() => parse("Dest <~ Src.out;"));
+  });
+
   it("parses all 7 Fibonacci downstream flows", () => {
     const g = parse(`
       Feedback_Merge  <~ Seed_Gen;
@@ -236,6 +254,28 @@ describe("Upstream nerves (~>)", () => {
     `);
     assert.equal(g.flows.length, 2);
     assert.equal(g.nerves.length, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Error recovery
+// ---------------------------------------------------------------------------
+
+describe("Error recovery", () => {
+  it("two consecutive .node declarations with no body throw", () => {
+    assert.throws(
+      () => parse(".node A @ 0x001 { .node B @ 0x002 { type: ALU_ADD; } }"),
+      (err) =>
+        err instanceof ParseError &&
+        err.message.toLowerCase().includes("node body")
+    );
+  });
+
+  it("missing semicolon on flow throws ParseError", () => {
+    assert.throws(
+      () => parse("A <~ B"),
+      (err) => err instanceof ParseError
+    );
   });
 });
 

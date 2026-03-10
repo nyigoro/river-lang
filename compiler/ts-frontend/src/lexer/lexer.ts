@@ -316,6 +316,9 @@ export class Lexer {
         return this.makeToken("FloatMm", lexeme, start, this.pos());
       }
     }
+    if (this.ch() === "." && isDigit(this.peek(1))) {
+      throw new LexError("Float literal missing 'mm' suffix", start);
+    }
 
     const lexeme = this.source.slice(start.offset, this.i);
     return this.makeToken("DecNumber", lexeme, start, this.pos());

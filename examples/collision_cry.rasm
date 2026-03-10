@@ -1,10 +1,19 @@
-; simulator phase test placeholder
-.epoch collision_test
-.sector verify
-.node stream_a
-.node stream_b
-.node merge_1
+; collision cry scenario
+.epoch 0x43525950
+.sector Alpha [0x000-0x1FF]
 
-stream_a ~> merge_1
-stream_b ~> merge_1
-#constraint expect_cry_on_conflict
+.node Stream_A @ 0x00A0 { type: TOKEN_GEN; tag: COLOR_AUTO; }
+.node Stream_B @ 0x00B4 { type: TOKEN_GEN; tag: COLOR_AUTO; }
+.node Merge_1  @ 0x00C8 { type: MERGE_GATE; fire_on: ALL_INPUTS; }
+
+@reservoir Out @ 0x00D2 {
+    arity: 1;
+    handshake: PATH_HASH;
+    on_dry: self.purge();
+}
+
+Merge_1 <~ Stream_A;
+Merge_1 <~ Stream_B;
+Out     <~ Merge_1;
+
+#constraint max_dist(Merge_1.cry, Stream_A) < 1.5mm;

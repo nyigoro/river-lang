@@ -59,6 +59,11 @@ river_result_t river_await(river_t r, uint64_t timeout_ns) {
             result.pain_hash = r->pain_hash;
         }
 
+        if (deadline > 0 && river_now_ns() >= deadline) {
+            result.status = RIVER_ERR_TIMEOUT;
+            river_set_error(r, "river_await timed out (deadline exceeded in sim)");
+        }
+
         return result;
     }
 

@@ -52,6 +52,12 @@ describe("Comments and whitespace", () => {
     const k = toks.map((t) => t.kind);
     assert.deepEqual(k, ["DotEpoch", "HexNumber", "EOF"]);
   });
+
+  it("semicolon comment is skipped when at line start", () => {
+    const toks = tokenize("; comment only line\n");
+    assert.equal(toks.length, 1);
+    assert.equal(toks[0]!.kind, "EOF");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -373,6 +379,24 @@ describe("Error handling", () => {
     );
   });
 
+  it("throws LexError on malformed float without mm suffix", () => {
+    assert.throws(
+      () => tokenize("1.5"),
+      (err) => err instanceof LexError
+    );
+  });
+
+  it("throws LexError on non-hex after 0x with correct position", () => {
+    try {
+      tokenize("0xG");
+      assert.fail("Should have thrown");
+    } catch (err) {
+      assert.ok(err instanceof LexError);
+      assert.equal(err.position.line, 1);
+      assert.equal(err.position.column, 1);
+    }
+  });
+
   it("LexError includes position information", () => {
     try {
       tokenize("\n\n^");
@@ -381,6 +405,30 @@ describe("Error handling", () => {
       assert.ok(err instanceof LexError);
       assert.equal(err.position.line, 3);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edge cases
+// ---------------------------------------------------------------------------
+
+describe("Edge cases", () => {
+  it("inline // comment after .epoch does not leak tokens", () => {
+    const toks = tokenize(".epoch 0x52495645 // comment");
+    const kinds = toks.map(t => t.kind);
+    assert.deepEqual(kinds, ["DotEpoch", "HexNumber", "EOF"]);
+  });
+
+  it("empty node body {} tokenizes correctly", () => {
+    const toks = tokenize(".node A @ 0x001 {}");
+    const kinds = toks.map(t => t.kind);
+    assert.deepEqual(kinds, ["DotNode", "Identifier", "At", "HexNumber", "LBrace", "RBrace", "EOF"]);
+  });
+
+  it("multiple consecutive comments produce only EOF", () => {
+    const toks = tokenize("// a\n; b\n// c\n");
+    assert.equal(toks.length, 1);
+    assert.equal(toks[0]!.kind, "EOF");
   });
 });
 

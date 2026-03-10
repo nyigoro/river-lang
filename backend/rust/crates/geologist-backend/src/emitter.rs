@@ -158,4 +158,145 @@ mod tests {
         let bytes = emit_with_sector_map(&mut manifest, 0);
         assert_eq!(&bytes[4..8], &[0x04, 0x03, 0x02, 0x01]);
     }
+
+    #[test]
+    fn encodes_map_node_correctly() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::MapNode {
+            node_id: 0x00AA,
+            address: 0x00B4_CAFE,
+            salted_hash: 0xDEAD_BEEF,
+        });
+
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4; // opcode + epoch payload
+        assert_eq!(bytes[offset], 0x02);
+        assert_eq!(&bytes[offset + 1..offset + 3], &0x00AAu16.to_le_bytes());
+        assert_eq!(&bytes[offset + 3..offset + 7], &0x00B4_CAFEu32.to_le_bytes());
+        assert_eq!(&bytes[offset + 7..offset + 11], &0xDEAD_BEEFu32.to_le_bytes());
+    }
+
+    #[test]
+    fn encodes_link_flow_downstream() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::LinkFlow { src: 0x00B4, dest: 0x00A0 });
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4;
+        assert_eq!(bytes[offset], 0x03);
+        let src = u16::from_le_bytes(bytes[offset + 1..offset + 3].try_into().unwrap());
+        assert_eq!(src & 0x8000, 0);
+    }
+
+    #[test]
+    fn encodes_link_flow_upstream() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::LinkFlow { src: 0x80C8, dest: 0x00B4 });
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4;
+        assert_eq!(bytes[offset], 0x03);
+        let src = u16::from_le_bytes(bytes[offset + 1..offset + 3].try_into().unwrap());
+        assert_ne!(src & 0x8000, 0);
+    }
+
+    #[test]
+    fn encodes_cfg_ppm() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::CfgPpm {
+            sector_id: 0,
+            cluster_mask: 0xFFFF_FFFF_FFFF_FFFF,
+        });
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4;
+        assert_eq!(bytes[offset], 0x04);
+        assert_eq!(bytes[offset + 1], 0);
+        assert_eq!(
+            &bytes[offset + 2..offset + 10],
+            &0xFFFF_FFFF_FFFF_FFFFu64.to_le_bytes()
+        );
+    }
+
+    #[test]
+    fn encodes_init_res() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::InitRes { arity: 1, flags: 0x01 });
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4;
+        assert_eq!(bytes[offset], 0x05);
+        assert_eq!(&bytes[offset + 1..offset + 3], &1u16.to_le_bytes());
+        assert_eq!(bytes[offset + 3], 0x01);
+    }
+
+    #[test]
+    fn encodes_set_constraint() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        manifest.instructions.push(Instruction::SetConstraint {
+            node_a: 0x0002,
+            node_b: 0x0001,
+            max_dist_um: 1500,
+        });
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        let offset = RvrHeader::BYTE_SIZE + 1 + 4;
+        assert_eq!(bytes[offset], 0x06);
+        assert_eq!(&bytes[offset + 1..offset + 3], &0x0002u16.to_le_bytes());
+        assert_eq!(&bytes[offset + 3..offset + 5], &0x0001u16.to_le_bytes());
+        assert_eq!(&bytes[offset + 5..offset + 7], &1500u16.to_le_bytes());
+    }
+
+    #[test]
+    fn empty_instructions_produces_header_only() {
+        let mut manifest = RvrManifest::new();
+        let bytes = emit_with_sector_map(&mut manifest, 0);
+        assert_eq!(bytes.len(), RvrHeader::BYTE_SIZE);
+    }
+
+    #[test]
+    fn round_trip_fibonacci_manifest() {
+        let mut manifest = RvrManifest::new();
+        manifest.instructions.push(Instruction::SetEpoch { epoch: 0x5249_5645 });
+        for (node_id, address, salted_hash) in [
+            (0u16, 0x00A0u32, 0x1111_1111u32),
+            (1u16, 0x00B4u32, 0x2222_2222u32),
+            (2u16, 0x00C8u32, 0x3333_3333u32),
+            (3u16, 0x00D2u32, 0x4444_4444u32),
+            (4u16, 0x0210u32, 0x5555_5555u32),
+            (5u16, 0x0300u32, 0x6666_6666u32),
+        ] {
+            manifest.instructions.push(Instruction::MapNode {
+                node_id,
+                address,
+                salted_hash,
+            });
+        }
+        manifest.instructions.extend([
+            Instruction::LinkFlow { src: 0x0000, dest: 0x0001 },
+            Instruction::LinkFlow { src: 0x0001, dest: 0x0002 },
+            Instruction::LinkFlow { src: 0x0000, dest: 0x0003 },
+            Instruction::LinkFlow { src: 0x0002, dest: 0x0004 },
+            Instruction::LinkFlow { src: 0x0003, dest: 0x0004 },
+            Instruction::LinkFlow { src: 0x4004, dest: 0x0001 },
+            Instruction::LinkFlow { src: 0x2004, dest: 0x0005 },
+            Instruction::LinkFlow { src: 0x8002, dest: 0x0001 },
+            Instruction::LinkFlow { src: 0x8001, dest: 0x0000 },
+        ]);
+        manifest.instructions.extend([
+            Instruction::CfgPpm { sector_id: 0, cluster_mask: u64::MAX },
+            Instruction::CfgPpm { sector_id: 1, cluster_mask: u64::MAX },
+        ]);
+        manifest.instructions.extend([
+            Instruction::SetConstraint { node_a: 2, node_b: 1, max_dist_um: 1500 },
+            Instruction::SetConstraint { node_a: 1, node_b: 0, max_dist_um: 1500 },
+        ]);
+        manifest.instructions.push(Instruction::InitRes { arity: 1, flags: 0x03 });
+
+        let bytes = emit_with_sector_map(&mut manifest, 0x3);
+        let (_, _, node_count, _, manifest_len) = parse_header(&bytes).unwrap();
+        assert_eq!(node_count, 6);
+        assert_eq!(manifest_len as usize, manifest.instruction_bytes());
+    }
 }

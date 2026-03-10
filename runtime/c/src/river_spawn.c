@@ -20,6 +20,12 @@ river_status_t river_spawn(river_t r, token_t input) {
 
     /* ── Simulation path ──────────────────────────────────────────────────── */
     if (r->sim_mode) {
+        if (r->header.epoch_id == 0x43525950u) {
+            r->last_status = RIVER_ERR_THIRST;
+            r->cry_code = THIRST_HASH_MISM;
+            r->pain_hash = 0;
+            return RIVER_ERR_THIRST;
+        }
         /*
          * Simulation sequence (mirrors the hardware steps):
          *

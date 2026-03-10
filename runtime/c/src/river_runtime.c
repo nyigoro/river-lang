@@ -142,7 +142,9 @@ void tag_palette_free(tag_palette_t *p, uint16_t tag) {
 
 static int parse_instructions(river_state_t *s,
                                const uint8_t *buf,
-                               uint32_t       len)
+                               uint32_t       len,
+                               uint32_t      *set_epoch,
+                               int           *has_set_epoch)
 {
     uint32_t pos = 0;
 
@@ -154,6 +156,10 @@ static int parse_instructions(river_state_t *s,
         case OP_SET_EPOCH:
             /* epoch already in header — consume 4 bytes */
             if (pos + 4 > len) goto trunc;
+            if (set_epoch && has_set_epoch) {
+                *set_epoch = read_u32_le(buf + pos);
+                *has_set_epoch = 1;
+            }
             pos += 4;
             break;
 
@@ -254,10 +260,19 @@ river_t river_load(const char *rvr_path) {
     s->header   = hdr;
     s->sim_mode = 1;
 
-    if (parse_instructions(s, buf + RVR_HEADER_SIZE, hdr.manifest_length) != 0) {
+    uint32_t set_epoch = 0;
+    int has_set_epoch = 0;
+    if (parse_instructions(s, buf + RVR_HEADER_SIZE, hdr.manifest_length, &set_epoch, &has_set_epoch) != 0) {
         free(buf); river_state_free(s); return NULL;
     }
     free(buf);
+
+    if (has_set_epoch && set_epoch != hdr.epoch_id) {
+        river_set_error(s, "Manifest epoch mismatch: header=0x%08X, set_epoch=0x%08X",
+                        hdr.epoch_id, set_epoch);
+        river_state_free(s);
+        return NULL;
+    }
 
     /* Assign initial TAG_GEN colour from palette */
     s->active_tag = tag_palette_alloc(&s->tag_palette);
