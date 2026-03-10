@@ -151,9 +151,11 @@ int main(int argc, char **argv) {
         /* Load from provided .rvr path */
         printf("Loading manifest: %s\n", argv[1]);
         r = river_load(argv[1]);
-    }
-
-    if (!r) {
+        if (!r) {
+            fprintf(stderr, "river_load() failed\n");
+            return 1;
+        }
+    } else {
         /* Generate synthetic demo manifest */
         uint8_t buf[1024];
         size_t  len = build_demo_rvr(buf, sizeof(buf));
@@ -184,9 +186,6 @@ int main(int argc, char **argv) {
         r = river_load(tmp_path);
     }
 
-    if (!r) {
-        fprintf(stderr, "river_load() failed\n");
-        return 1;
     }
 
     printf("  Nodes:     %u\n", r->node_count);
