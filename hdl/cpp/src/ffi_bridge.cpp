@@ -7,7 +7,7 @@
 
 namespace {
 
-std::unordered_map<uint32_t, river::Point2D> coords_by_hash(const rust::Slice<CoordEntry>& coords) {
+std::unordered_map<uint32_t, river::Point2D> coords_by_hash(rust::Slice<const CoordEntry> coords) {
     std::unordered_map<uint32_t, river::Point2D> map;
     map.reserve(coords.size());
     for (const auto& entry : coords) {
@@ -79,7 +79,7 @@ rust::Vec<DrcViolation> run_structural_drc(const RvrManifest& manifest) {
 
 rust::Vec<DrcViolation> run_physical_drc(
     const RvrManifest& manifest,
-    const rust::Slice<CoordEntry>& coords
+    rust::Slice<const CoordEntry> coords
 ) {
     auto nodes_rv = manifest.get_map_nodes();
     auto constraints_rv = manifest.get_constraints();

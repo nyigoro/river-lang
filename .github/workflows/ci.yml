@@ -74,20 +74,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable MSVC Dev Cmd
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Configure (cmake)
         working-directory: runtime/c
-        shell: cmd
         run: |
           cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         working-directory: runtime/c
-        shell: cmd
         run: cmake --build build --config Release
 
       - name: Test (ctest)
         working-directory: runtime/c/build
-        shell: cmd
         run: ctest --output-on-failure -C Release
 
   lsp-test:
@@ -172,10 +172,17 @@ jobs:
       - name: Configure (cmake + ninja)
         working-directory: hdl/cpp
         run: |
+          cargo build -p geologist-backend --manifest-path backend/rust/Cargo.toml
+          CXXBRIDGE_DIR=$(ls -d backend/rust/target/debug/build/geologist-backend-*/out/cxxbridge/include | head -n 1)
+          if [ -z "$CXXBRIDGE_DIR" ]; then
+            echo "cxxbridge include dir not found" >&2
+            exit 1
+          fi
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER=clang++ \
-            -DRIVER_WITH_CXXBRIDGE=ON
+            -DRIVER_WITH_CXXBRIDGE=ON \
+            -DRIVER_CXXBRIDGE_INCLUDE_DIR="$CXXBRIDGE_DIR"
 
       - name: Build
         working-directory: hdl/cpp
