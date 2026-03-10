@@ -118,6 +118,14 @@ export class Lexer {
         continue;
       }
 
+      // Line comment: ; ...
+      if (ch === ";") {
+        while (this.i < this.source.length && this.ch() !== "\n") {
+          this.advance();
+        }
+        continue;
+      }
+
       break;
     }
   }
