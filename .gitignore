@@ -62,3 +62,9 @@ runtime/c/build-*/
 
 # LSP build output
 tooling/lsp/dist/
+
+# CXX bridge output
+backend/rust/crates/geologist-backend/target/cxxbridge/
+
+# HDL C++ build
+hdl/cpp/build/

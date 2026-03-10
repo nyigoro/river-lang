@@ -1,0 +1,23 @@
+{
+  "epoch": 1337,
+  "sectors": [
+    {"name": "Alpha", "start": 0, "end": 511},
+    {"name": "Beta", "start": 512, "end": 1023}
+  ],
+  "nodes": [
+    {"name": "Seed_Gen", "address": 160},
+    {"name": "Fibonacci_Adder", "address": 200},
+    {"name": "Exit_Gate", "address": 528}
+  ],
+  "reservoir": {"name": "Final_Output", "address": 768, "arity": 1},
+  "flows": [
+    {"direction": "DOWN", "from": {"node": "Final_Output"}, "to": {"node": "Exit_Gate"}},
+    {"direction": "DOWN", "from": {"node": "Exit_Gate"}, "to": {"node": "Fibonacci_Adder"}}
+  ],
+  "nerves": [
+    {"direction": "UP", "from": {"node": "Fibonacci_Adder", "accessor": "cry"}, "to": {"node": "Seed_Gen"}}
+  ],
+  "constraints": [
+    {"fn": "max_dist", "portA": {"node": "Fibonacci_Adder", "accessor": "cry"}, "portB": {"node": "Seed_Gen"}, "value": 1.5, "unit": "mm"}
+  ]
+}

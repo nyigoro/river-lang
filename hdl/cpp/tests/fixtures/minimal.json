@@ -1,0 +1,12 @@
+{
+  "epoch": 1,
+  "sectors": [],
+  "nodes": [
+    {"name": "A", "address": 16},
+    {"name": "B", "address": 32}
+  ],
+  "reservoir": null,
+  "flows": [],
+  "nerves": [],
+  "constraints": []
+}
