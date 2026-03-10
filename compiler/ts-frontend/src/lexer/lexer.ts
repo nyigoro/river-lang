@@ -67,6 +67,7 @@ export class Lexer {
   private i = 0;
   private line = 1;
   private column = 1;
+  private lineStart = 0;
   private readonly source: string;
 
   constructor(source: string) {
@@ -118,8 +119,8 @@ export class Lexer {
         continue;
       }
 
-      // Line comment: ; ...
-      if (ch === ";") {
+      // Line comment: ; ... (only when comment starts at line head/whitespace)
+      if (ch === ";" && this.isLineCommentStart()) {
         while (this.i < this.source.length && this.ch() !== "\n") {
           this.advance();
         }
@@ -361,6 +362,9 @@ export class Lexer {
         if (this.source.charAt(this.i) === "\n") {
           this.line++;
           this.column = 1;
+          this.i++;
+          this.lineStart = this.i;
+          continue;
         } else {
           this.column++;
         }
@@ -380,6 +384,11 @@ export class Lexer {
     end: SourcePosition
   ): Token {
     return { kind, lexeme, start, end };
+  }
+
+  private isLineCommentStart(): boolean {
+    const prefix = this.source.slice(this.lineStart, this.i);
+    return prefix.trim().length === 0;
   }
 }
 

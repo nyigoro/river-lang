@@ -1,9 +1,30 @@
-; canonical phase-1 sample
-.epoch fib_epoch
-.sector compute
-.node fib_seed
-@reservoir input
+; canonical fibonacci program
+.epoch 0x52495645
+.sector Alpha [0x000-0x1FF]
+.sector Beta  [0x200-0x3FF]
 
-fib_seed <~ input
-fib_seed ~> fib_step /? safe
-#constraint nonnegative
+.node Seed_Gen        @ 0x00A0 { type: TOKEN_GEN;   tag: COLOR_AUTO; }
+.node Feedback_Merge  @ 0x00B4 { type: MERGE_GATE;  fire_on: ALL_INPUTS; }
+.node Fibonacci_Adder @ 0x00C8 { type: ALU_ADD;     tag: COLOR_AUTO; }
+.node Counter_Sub     @ 0x00D2 { type: ALU_SUB;     tag: COLOR_AUTO; }
+.node Exit_Gate       @ 0x0210 { type: SWITCH_GATE; sector: Beta; }
+
+@reservoir Final_Output @ 0x0300 {
+    arity: 1;
+    handshake: PATH_HASH;
+    on_dry: self.purge();
+}
+
+Feedback_Merge    <~ Seed_Gen;
+Fibonacci_Adder   <~ Feedback_Merge;
+Counter_Sub       <~ Seed_Gen;
+Exit_Gate         <~ Fibonacci_Adder;
+Exit_Gate         <~ Counter_Sub;
+Feedback_Merge    <~ Exit_Gate.TRUE;
+Final_Output      <~ Exit_Gate.FALSE;
+
+Fibonacci_Adder.cry ~> Feedback_Merge;
+Feedback_Merge.cry  ~> Seed_Gen;
+
+#constraint max_dist(Fibonacci_Adder.cry, Feedback_Merge) < 1.5mm;
+#constraint max_dist(Feedback_Merge.cry, Seed_Gen)        < 1.5mm;
