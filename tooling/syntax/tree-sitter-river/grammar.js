@@ -105,14 +105,14 @@ module.exports = grammar({
     ),
 
     reservoir_property: $ => choice(
-      seq('arity',     ':', field('value', $.dec_number),        ';'),
-      seq('handshake', ':', field('value', $.boolean_literal),   ';'),
-      seq('on_dry',    ':', field('value', $.on_dry_value),      ';'),
+      seq(field('key', $.kw_arity),     ':', field('value', $.dec_number),        ';'),
+      seq(field('key', $.kw_handshake), ':', field('value', $.boolean_literal),   ';'),
+      seq(field('key', $.kw_on_dry),    ':', field('value', $.on_dry_value),      ';'),
     ),
 
-    on_dry_value: _ => choice(
+    on_dry_value: $ => choice(
       'self.purge()',
-      /[A-Za-z_][A-Za-z0-9_]*/,
+      $.identifier,
     ),
 
     boolean_literal: _ => choice('true', 'false'),
@@ -160,7 +160,7 @@ module.exports = grammar({
 
     constraint_statement: $ => seq(
       '#',
-      'constraint',
+      field('keyword', $.kw_constraint),
       field('fn',    $.constraint_fn),
       '(',
       field('port_a', $.port_ref),
@@ -189,6 +189,11 @@ module.exports = grammar({
 
     // ── Identifier ──────────────────────────────────────────────────────────
 
-    identifier: _ => /[A-Za-z_][A-Za-z0-9_]*/,
+    identifier: _ => token(/[A-Za-z_][A-Za-z0-9_]*/),
+
+    kw_arity: _ => 'arity',
+    kw_handshake: _ => 'handshake',
+    kw_on_dry: _ => 'on_dry',
+    kw_constraint: _ => 'constraint',
   },
 });

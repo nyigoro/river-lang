@@ -84,9 +84,9 @@ Reservoir declaration
     (identifier)
     (hex_number)
     (reservoir_body
-      (reservoir_property (dec_number))
-      (reservoir_property (boolean_literal))
-      (reservoir_property (on_dry_value)))))
+      (reservoir_property (kw_arity) (dec_number))
+      (reservoir_property (kw_handshake) (boolean_literal))
+      (reservoir_property (kw_on_dry) (on_dry_value)))))
 
 ================================================================================
 Downstream flow — bare nodes
@@ -137,6 +137,7 @@ Constraint statement
 
 (source_file
   (constraint_statement
+    (kw_constraint)
     (constraint_fn)
     (port_ref (identifier) (port_accessor))
     (port_ref (identifier))
@@ -210,13 +211,13 @@ Fibonacci_Adder.cry ~> Seed_Gen;
       (node_property (property_key) (property_value (identifier)))))
   (reservoir_declaration (identifier) (hex_number)
     (reservoir_body
-      (reservoir_property (dec_number))
-      (reservoir_property (boolean_literal))
-      (reservoir_property (on_dry_value))))
+      (reservoir_property (kw_arity) (dec_number))
+      (reservoir_property (kw_handshake) (boolean_literal))
+      (reservoir_property (kw_on_dry) (on_dry_value))))
   (flow_statement (port_ref (identifier)) (port_ref (identifier) (port_accessor)))
   (flow_statement (port_ref (identifier)) (port_ref (identifier)))
   (nerve_statement (port_ref (identifier) (port_accessor)) (port_ref (identifier)))
-  (constraint_statement (constraint_fn)
+  (constraint_statement (kw_constraint) (constraint_fn)
     (port_ref (identifier) (port_accessor))
     (port_ref (identifier))
     (distance_literal)))
