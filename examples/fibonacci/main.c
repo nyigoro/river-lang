@@ -186,8 +186,6 @@ int main(int argc, char **argv) {
         r = river_load(tmp_path);
     }
 
-    }
-
     printf("  Nodes:     %u\n", r->node_count);
     printf("  Sectors:   %u\n", r->sector_count);
     printf("  Reservoir: %s\n", r->has_reservoir ? "yes" : "no");
